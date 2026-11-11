@@ -1,9 +1,11 @@
 const typography = {
   fontFamily: {
-    heading: "System",
-    body: "System",
+    heading: "ClashDisplaySemibold",
+    body: "DMSansRegular",
+    medium: "DMSansMedium",
+    semibold: "DMSansSemiBold",
+    bold: "DMSansBold",
   },
-
   fontSize: {
     xs: 12,
     sm: 14,
@@ -14,7 +16,6 @@ const typography = {
     "3xl": 30,
     "4xl": 36,
   },
-
   fontWeight: {
     regular: "400",
     medium: "500",
