@@ -4,6 +4,10 @@ import theme from "../constants/theme";
 
 import SectionHeader from "../components/SectionHeader";
 import ServiceItem from "../components/ServiceItem";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { ServicesStackParamList } from "../navigation/ServicesStackNavigator";
+
+type Props = NativeStackScreenProps<ServicesStackParamList, "ServicesHome">;
 
 const services = [
   {
@@ -32,7 +36,7 @@ const services = [
   },
 ] as const;
 
-export default function ServicesScreen() {
+export default function ServicesScreen({ navigation }: Props) {
   return (
     <ScrollView
       style={styles.container}
@@ -59,6 +63,11 @@ export default function ServicesScreen() {
                 name={service.name}
                 icon={service.icon}
                 color={service.color}
+                onPress={() => {
+                  if (service.name === "Airtime") {
+                    navigation.navigate("AirtimePurchase");
+                  }
+                }}
               />
 
               <Text style={styles.description}>{service.description}</Text>

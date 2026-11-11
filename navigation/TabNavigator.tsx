@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import HomeScreen from "../screens/HomeScreen";
-import ServicesScreen from "../screens/ServicesScreen";
+import ServicesStackNavigator from "./ServicesStackNavigator";
 import TransactionsScreen from "../screens/TransactionsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 
@@ -50,7 +50,7 @@ export default function TabNavigator() {
 
       <Tab.Screen
         name="Services"
-        component={ServicesScreen}
+        component={ServicesStackNavigator}
         options={{
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons
