@@ -5,10 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  Platform,
 } from "react-native";
-import * as Sharing from "expo-sharing";
-import * as FileSystem from "expo-file-system/legacy";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -19,16 +16,11 @@ import PurchaseSummary from "../components/PurchaseSummary";
 
 import type { ServicesStackParamList } from "../navigation/ServicesStackNavigator";
 
-import { generateReceiptPdf } from "../utils/generateReceiptPdf";
 import { useTransactions } from "../context/TransactionContext";
 import type { Transaction } from "../types/transaction";
-import type { RootTabParamList } from "../navigation/TabNavigator";
-import type {
-  CompositeNavigationProp,
-  NavigatorScreenParams,
-} from "@react-navigation/native";
 
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { generateReceiptPdf } from "../utils/generateReceiptPdf";
+import { downloadReceipt, shareReceipt } from "../utils/receiptActions";
 
 type Props = NativeStackScreenProps<
   ServicesStackParamList,
@@ -36,10 +28,6 @@ type Props = NativeStackScreenProps<
 >;
 
 export default function TransactionSuccessScreen({ route, navigation }: Props) {
-  type TransactionSuccessNavigationProp = CompositeNavigationProp<
-    NativeStackNavigationProp<ServicesStackParamList, "TransactionSuccess">,
-    NativeStackNavigationProp<RootTabParamList>
-    >;
   
   const {
     serviceType,
@@ -47,10 +35,6 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
     phoneNumber,
     description,
     amount,
-    discount,
-    providerBonus,
-    serviceBonus,
-    tieredBonus,
     totalAmount,
     transactionReference,
     completedAt,
@@ -94,6 +78,23 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
 
+// Function to format the date in a readable format
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+
+    if (Number.isNaN(date.getTime())) {
+      return "Date unavailable";
+    }
+
+    return date.toLocaleString("en-NG", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   // Function to create the receipt PDF
   const createReceipt = async () => {
     return generateReceiptPdf({
@@ -109,79 +110,52 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
   };
 
   // Handle the download or sharing of the receipt PDF
-  const handleDownloadReceipt = async () => {
-    try {
-      setIsGenerating(true);
+ const handleDownloadReceipt = async () => {
+   try {
+     setIsGenerating(true);
 
-      const receipt = await createReceipt();
+     const receipt = await createReceipt();
+     const saved = await downloadReceipt(receipt);
 
-      const permission =
-        await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+     if (saved) {
+       Alert.alert(
+         "Receipt Saved",
+         `${receipt.fileName} was saved successfully.`,
+       );
+     }
+   } catch (error) {
+     console.error("Receipt download error:", error);
 
-      if (!permission.granted) {
-        return;
-      }
-
-      const file = await FileSystem.StorageAccessFramework.createFileAsync(
-        permission.directoryUri,
-        receipt.fileName,
-        "application/pdf",
-      );
-
-      await FileSystem.writeAsStringAsync(file, receipt.base64, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      Alert.alert(
-        "Receipt Saved",
-        `${receipt.fileName} was saved successfully.`,
-      );
-    } catch (error) {
-      console.error("Receipt download error:", error);
-
-      Alert.alert(
-        "Download Failed",
-        "Unable to save your receipt. Please try again.",
-      );
-    } finally {
-      setIsGenerating(false);
-    }
+     Alert.alert(
+       "Download Failed",
+       "Unable to save your receipt. Please try again.",
+     );
+   } finally {
+     setIsGenerating(false);
+   }
   };
-
+ 
   // Handle the sharing of the receipt PDF
-  const handleShareReceipt = async () => {
-    try {
-      setIsSharing(true);
+ const handleShareReceipt = async () => {
+   try {
+     setIsSharing(true);
 
-      const receipt = await createReceipt();
+     const receipt = await createReceipt();
 
-      if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert("Unavailable", "Sharing is not available on this device.");
-        return;
-      }
+     await shareReceipt(receipt);
+   } catch (error) {
+     console.error("Receipt sharing error:", error);
 
-      const receiptUri = `${FileSystem.cacheDirectory}${receipt.fileName}`;
-
-      await FileSystem.writeAsStringAsync(receiptUri, receipt.base64, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      await Sharing.shareAsync(receiptUri, {
-        mimeType: "application/pdf",
-        dialogTitle: "Share PsalmoteeData Receipt",
-        UTI: "com.adobe.pdf",
-      });
-    } catch (error) {
-      console.error("Receipt sharing error:", error);
-
-      Alert.alert(
-        "Sharing Failed",
-        "Unable to share your receipt. Please try again.",
-      );
-    } finally {
-      setIsSharing(false);
-    }
-  };
+     Alert.alert(
+       "Sharing Failed",
+       error instanceof Error
+         ? error.message
+         : "Unable to share your receipt. Please try again.",
+     );
+   } finally {
+     setIsSharing(false);
+   }
+ };
 
   return (
     <ScrollView
@@ -222,13 +196,9 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
             value: description,
           },
           { label: "Transaction Reference", value: transactionReference },
-          { label: "Date", value: completedAt },
+          { label: "Date", value: formatDate(completedAt) },
         ]}
         amount={formatCurrency(amount)}
-        discount={formatCurrency(-discount)}
-        providerBonus={formatCurrency(providerBonus)}
-        serviceBonus={formatCurrency(serviceBonus)}
-        tieredBonus={formatCurrency(tieredBonus)}
         totalLabel="Total Paid"
         totalAmount={formatCurrency(totalAmount)}
       />

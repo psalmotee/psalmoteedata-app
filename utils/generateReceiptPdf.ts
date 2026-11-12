@@ -19,6 +19,23 @@ const formatCurrency = (amount: number) =>
     maximumFractionDigits: 2,
   })}`;
 
+  // Format the date string into a more readable format.
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+
+    if (Number.isNaN(date.getTime())) {
+      return "Date unavailable";
+    }
+
+    return date.toLocaleString("en-NG", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
 export async function generateReceiptPdf(data: ReceiptData) {
   // Load the PsalmoteeData logo.
   const logoAsset = Asset.fromModule(
@@ -58,7 +75,7 @@ export async function generateReceiptPdf(data: ReceiptData) {
           }
 
           .receipt {
-            max-width: 500px;
+            max-width: 700px;
             margin: auto;
             background: #ffffff;
             border-radius: 14px;
@@ -90,7 +107,7 @@ export async function generateReceiptPdf(data: ReceiptData) {
           }
 
           .subtitle {
-            font-size: 12px;
+            font-size: 14px;
             margin-top: 6px;
           }
 
@@ -128,7 +145,7 @@ export async function generateReceiptPdf(data: ReceiptData) {
             justify-content: space-between;
             gap: 15px;
             margin-bottom: 15px;
-            font-size: 13px;
+            font-size: 14px;
           }
 
           .label {
@@ -156,8 +173,13 @@ export async function generateReceiptPdf(data: ReceiptData) {
             background: #f9fafb;
             text-align: center;
             padding: 20px;
-            font-size: 11px;
+            font-size: 14px;
             color: #6b7280;
+          }
+
+          .footer a {
+            color: #0284A8;
+            text-decoration: none;
           }
         </style>
       </head>
@@ -217,7 +239,7 @@ export async function generateReceiptPdf(data: ReceiptData) {
 
             <div class="row">
               <span class="label">Date & Time</span>
-              <span class="value">${data.completedAt}</span>
+              <span class="value">${formatDate(data.completedAt)}</span>
             </div>
           </div>
 
@@ -237,7 +259,7 @@ export async function generateReceiptPdf(data: ReceiptData) {
 
           <div class="footer">
             Thank you for using PsalmoteeData.<br />
-            This is a computer-generated transaction receipt.
+            For support, contact us at <a href="mailto:psalmoteetelecoms@gmail.com">psalmoteetelecoms@gmail.com</a> or <a href="https://wa.me/+2348058461612">WhatsApp Chat</a>.
           </div>
 
         </div>
@@ -255,7 +277,7 @@ export async function generateReceiptPdf(data: ReceiptData) {
     throw new Error("Unable to generate PDF data.");
   }
 
-  const fileName = `${data.serviceType}-${data.phoneNumber}.pdf`;
+  const fileName = `${data.serviceType}-${data.phoneNumber}-${data.transactionReference}.pdf`;
 
   return {
     base64: pdf.base64,
