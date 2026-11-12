@@ -16,6 +16,11 @@ import TransactionItem from "../components/TransactionItem";
 import WalletCard from "../components/WalletCard";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { RootTabParamList } from "../navigation/TabNavigator";
+
+type Props = BottomTabScreenProps<RootTabParamList, "Home">;
+
 const services = [
   {
     name: "Airtime",
@@ -56,7 +61,7 @@ const transactions = [
   },
 ];
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }: Props) {
   return (
     <ScrollView
       style={styles.container}
@@ -95,6 +100,19 @@ export default function HomeScreen() {
               name={service.name}
               icon={service.icon}
               color={service.color}
+              onPress={() => {
+                if (service.name === "Airtime") {
+                  navigation.navigate("Services", {
+                    screen: "AirtimePurchase",
+                  });
+                }
+
+                if (service.name === "Data") {
+                  navigation.navigate("Services", {
+                    screen: "DataPurchase",
+                  });
+                }
+              }}
             />
           ))}
         </View>
