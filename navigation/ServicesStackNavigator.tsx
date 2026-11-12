@@ -3,9 +3,8 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import ServicesScreen from "../screens/ServicesScreen";
 import AirtimePurchaseScreen from "../screens/AirtimePurchaseScreen";
 import DataPurchaseScreen from "../screens/DataPurchaseScreen";
-
-
 import TransactionConfirmationScreen from "../screens/TransactionConfirmationScreen";
+import TransactionSuccessScreen from "../screens/TransactionSuccessScreen";
 
 export type ServicesStackParamList = {
   ServicesHome: undefined;
@@ -22,6 +21,21 @@ export type ServicesStackParamList = {
     serviceBonus: number;
     tieredBonus: number;
     totalAmount: number;
+  };
+
+  TransactionSuccess: {
+    serviceType: "Airtime" | "Data";
+    network: string;
+    phoneNumber: string;
+    description: string;
+    amount: number;
+    discount: number;
+    providerBonus: number;
+    serviceBonus: number;
+    tieredBonus: number;
+    totalAmount: number;
+    transactionReference: string;
+    completedAt: string;
   };
 };
 
@@ -46,6 +60,11 @@ export default function ServicesStackNavigator() {
       <Stack.Screen
         name="TransactionConfirmation"
         component={TransactionConfirmationScreen}
+      />
+
+      <Stack.Screen
+        name="TransactionSuccess"
+        component={TransactionSuccessScreen}
       />
     </Stack.Navigator>
   );

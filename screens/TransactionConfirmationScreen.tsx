@@ -38,26 +38,31 @@ export default function TransactionConfirmationScreen({
       minimumFractionDigits: 2,
     })}`;
 
-  const handleConfirmPayment = () => {
-    if (pin.length !== 4) {
-      Alert.alert("Invalid PIN", "Please enter your 4-digit transaction PIN.");
-      return;
-    }
+ const handleConfirmPayment = () => {
+   if (pin.length !== 4) {
+     Alert.alert("Invalid PIN", "Please enter your 4-digit transaction PIN.");
+     return;
+   }
 
-    Alert.alert(
-      "Demo Transaction",
-      "Your PIN has been accepted for this demonstration. Actual payment processing will be implemented later.",
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            setPin("");
-            navigation.popToTop();
-          },
-        },
-      ],
-    );
-  };
+   // Generate a mock transaction reference.
+   const transactionReference = `PTD-${Date.now()}`;
+
+   // Capture the transaction completion date.
+   const completedAt = new Date().toLocaleString("en-NG", {
+     dateStyle: "medium",
+     timeStyle: "short",
+   });
+
+   // Navigate to the success receipt.
+   navigation.replace("TransactionSuccess", {
+     ...route.params,
+     transactionReference,
+     completedAt,
+   });
+
+   // Clear the PIN from component state.
+   setPin("");
+ };
 
   return (
     <ScrollView
