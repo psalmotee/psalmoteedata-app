@@ -10,6 +10,13 @@ import {
 
 import { useState } from "react";
 import theme from "../constants/theme";
+import NetworkSelector from "../components/NetworkSelector";
+import PhoneNumberInput from "../components/PhoneNumberInput";
+import PurchaseSummary from "../components/PurchaseSummary";
+import AppButton from "../components/AppButton";
+
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { ServicesStackParamList } from "../navigation/ServicesStackNavigator";
 
 const networks = [
   { id: "mtn", name: "MTN", color: "#FFCC00" },
@@ -20,7 +27,9 @@ const networks = [
 
 const quickAmounts = [100, 200, 500, 1000, 2000, 5000];
 
-export default function AirtimePurchaseScreen() {
+type Props = NativeStackScreenProps<ServicesStackParamList, "AirtimePurchase">;
+
+export default function AirtimePurchaseScreen({ navigation }: Props) {
   const [selectedNetwork, setSelectedNetwork] = useState("mtn");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [amount, setAmount] = useState("");
@@ -29,26 +38,34 @@ export default function AirtimePurchaseScreen() {
   );
 
   // Handle Continue Button Press
-  const handleContinue = () => {
-    if (!/^0\d{10}$/.test(phoneNumber)) {
-      Alert.alert(
-        "Invalid Phone Number",
-        "Please enter a valid 11-digit Nigerian phone number.",
-      );
-      return;
-    }
+ const handleContinue = () => {
+   if (!/^0\d{10}$/.test(phoneNumber)) {
+     Alert.alert(
+       "Invalid Phone Number",
+       "Please enter a valid 11-digit Nigerian phone number.",
+     );
+     return;
+   }
 
-    if (!amount || Number(amount) <= 0) {
-      Alert.alert("Invalid Amount", "Please enter a valid airtime amount.");
-      return;
-    }
+   if (!amount || Number(amount) <= 0) {
+     Alert.alert("Invalid Amount", "Please enter a valid airtime amount.");
+     return;
+   }
 
-    Alert.alert(
-      "Details Verified",
-      `Your ${selectedNetworkDetails?.name} airtime purchase details are valid.\n\nPhone: ${phoneNumber}\nAmount: ₦${Number(amount).toLocaleString("en-NG")}\n\nPayment processing will be implemented later.`,
-    );
+   navigation.navigate("TransactionConfirmation", {
+     serviceType: "Airtime",
+     network: selectedNetworkDetails?.name ?? "Unknown",
+     phoneNumber,
+     description: "Airtime Purchase",
+     amount: Number(amount),
+     discount: 0,
+     providerBonus: 0,
+     serviceBonus: 0,
+     tieredBonus: 0,
+     totalAmount: Number(amount),
+   });
   };
-
+ 
   return (
     <ScrollView
       style={styles.container}
@@ -67,61 +84,18 @@ export default function AirtimePurchaseScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Select Network</Text>
 
-        <View style={styles.networkGrid}>
-          {networks.map((network) => {
-            const isSelected = selectedNetwork === network.id;
-
-            return (
-              <Pressable
-                key={network.id}
-                onPress={() => setSelectedNetwork(network.id)}
-                style={[
-                  styles.networkCard,
-                  isSelected && styles.selectedNetwork,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.networkLogo,
-                    { backgroundColor: network.color },
-                  ]}
-                >
-                  <Text style={styles.networkInitial}>
-                    {network.name === "9mobile" ? "9" : network.name.charAt(0)}
-                  </Text>
-                </View>
-
-                <Text style={styles.networkName}>{network.name}</Text>
-
-                {isSelected && (
-                  <View style={styles.selectedIndicator}>
-                    <Text style={styles.checkmark}>✓</Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
+        <NetworkSelector
+          networks={networks}
+          selectedNetwork={selectedNetwork}
+          onSelectNetwork={(networkId) => {
+            setSelectedNetwork(networkId);
+            setAmount("");
+          }}
+        />
       </View>
 
       {/* Phone Number */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Phone Number</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Enter phone number"
-          placeholderTextColor={theme.colors.muted}
-          keyboardType="phone-pad"
-          maxLength={11}
-          value={phoneNumber}
-          onChangeText={setPhoneNumber}
-        />
-
-        <Text style={styles.helperText}>
-          Enter the 11-digit mobile number you want to recharge.
-        </Text>
-      </View>
+      <PhoneNumberInput value={phoneNumber} onChangeText={setPhoneNumber} />
 
       {/* Amount */}
       <View style={styles.section}>
@@ -175,37 +149,28 @@ export default function AirtimePurchaseScreen() {
       </View>
 
       {/* Purchase Summary */}
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Purchase Summary</Text>
-
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Network</Text>
-          <Text style={styles.summaryValue}>
-            {selectedNetworkDetails?.name}
-          </Text>
-        </View>
-
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Phone Number</Text>
-          <Text style={styles.summaryValue}>
-            {phoneNumber || "Not entered"}
-          </Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.summaryRow}>
-          <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalAmount}>
-            ₦{Number(amount || 0).toLocaleString("en-NG")}
-          </Text>
-        </View>
-      </View>
+      <PurchaseSummary
+        rows={[
+          {
+            label: "Network",
+            value: selectedNetworkDetails?.name ?? "Not selected",
+          },
+          {
+            label: "Phone Number",
+            value: phoneNumber || "Not entered",
+          },
+        ]}
+        amount={`₦${Number(amount || 0).toLocaleString("en-NG")}`}
+        discount="−₦0.00"
+        providerBonus="₦0.00"
+        serviceBonus="₦0.00"
+        tieredBonus="₦0.00"
+        totalLabel="Total Amount to Pay"
+        totalAmount={`₦${Number(amount || 0).toLocaleString("en-NG")}`}
+      />
 
       {/* Continue Button */}
-      <Pressable style={styles.continueButton} onPress={handleContinue}>
-        <Text style={styles.continueButtonText}>Continue</Text>
-      </Pressable>
+      <AppButton title="Continue" onPress={handleContinue} />
     </ScrollView>
   );
 }
@@ -237,83 +202,12 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: theme.spacing["2xl"],
   },
+
   sectionTitle: {
     color: theme.colors.text,
     fontSize: theme.typography.fontSize.base,
     fontFamily: theme.typography.fontFamily.semibold,
     marginBottom: theme.spacing.lg,
-  },
-  networkGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  networkCard: {
-    width: "48%",
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.lg,
-    alignItems: "center",
-    marginBottom: theme.spacing.md,
-    position: "relative",
-  },
-  selectedNetwork: {
-    borderColor: theme.colors.primary,
-    borderWidth: 2,
-    backgroundColor: theme.colors.cardSecondary,
-  },
-  networkLogo: {
-    width: 48,
-    height: 48,
-    borderRadius: theme.radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: theme.spacing.md,
-  },
-  networkInitial: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.xl,
-    fontFamily: theme.typography.fontFamily.bold,
-  },
-  networkName: {
-    color: theme.colors.text,
-    fontSize: theme.typography.fontSize.sm,
-    fontFamily: theme.typography.fontFamily.semibold,
-  },
-  selectedIndicator: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 20,
-    height: 20,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkmark: {
-    color: theme.colors.white,
-    fontSize: 12,
-    fontFamily: theme.typography.fontFamily.bold,
-  },
-  input: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.lg,
-    color: theme.colors.text,
-    fontSize: theme.typography.fontSize.base,
-    fontFamily: theme.typography.fontFamily.body,
-  },
-
-  helperText: {
-    color: theme.colors.muted,
-    fontSize: theme.typography.fontSize.xs,
-    fontFamily: theme.typography.fontFamily.body,
-    marginTop: theme.spacing.sm,
   },
 
   amountInputContainer: {
@@ -339,6 +233,13 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.lg,
     fontFamily: theme.typography.fontFamily.medium,
     paddingVertical: theme.spacing.lg,
+  },
+
+  helperText: {
+    color: theme.colors.muted,
+    fontSize: theme.typography.fontSize.xs,
+    fontFamily: theme.typography.fontFamily.body,
+    marginTop: theme.spacing.sm,
   },
 
   quickAmounts: {

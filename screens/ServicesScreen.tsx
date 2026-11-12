@@ -67,6 +67,10 @@ export default function ServicesScreen({ navigation }: Props) {
                   if (service.name === "Airtime") {
                     navigation.navigate("AirtimePurchase");
                   }
+
+                  if (service.name === "Data") {
+                    navigation.navigate("DataPurchase");
+                  }
                 }}
               />
 
