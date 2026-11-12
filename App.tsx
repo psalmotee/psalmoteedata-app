@@ -10,6 +10,7 @@ import {
 } from "@expo-google-fonts/dm-sans";
 
 import TabNavigator from "./navigation/TabNavigator";
+import { TransactionProvider } from "./context/TransactionContext";
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -28,9 +29,11 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <StatusBar style="light" />
-      <TabNavigator />
-    </NavigationContainer>
+    <TransactionProvider>
+      <NavigationContainer>
+        <StatusBar style="light" />
+        <TabNavigator />
+      </NavigationContainer>
+    </TransactionProvider>
   );
 }

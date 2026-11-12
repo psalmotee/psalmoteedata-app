@@ -51,14 +51,13 @@ export default function AppButton({
 
 const styles = StyleSheet.create({
   button: {
-    flex: 1,
+    minHeight: 48,
     paddingVertical: 13,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.md,
     alignItems: "center",
     justifyContent: "center",
   },
-
   primaryButton: {
     backgroundColor: theme.colors.primary,
   },

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,15 @@ import PurchaseSummary from "../components/PurchaseSummary";
 import type { ServicesStackParamList } from "../navigation/ServicesStackNavigator";
 
 import { generateReceiptPdf } from "../utils/generateReceiptPdf";
+import { useTransactions } from "../context/TransactionContext";
+import type { Transaction } from "../types/transaction";
+import type { RootTabParamList } from "../navigation/TabNavigator";
+import type {
+  CompositeNavigationProp,
+  NavigatorScreenParams,
+} from "@react-navigation/native";
+
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 type Props = NativeStackScreenProps<
   ServicesStackParamList,
@@ -27,6 +36,11 @@ type Props = NativeStackScreenProps<
 >;
 
 export default function TransactionSuccessScreen({ route, navigation }: Props) {
+  type TransactionSuccessNavigationProp = CompositeNavigationProp<
+    NativeStackNavigationProp<ServicesStackParamList, "TransactionSuccess">,
+    NativeStackNavigationProp<RootTabParamList>
+    >;
+  
   const {
     serviceType,
     network,
@@ -41,6 +55,35 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
     transactionReference,
     completedAt,
   } = route.params;
+
+  const { addTransaction } = useTransactions();
+
+  useEffect(() => {
+    const transaction: Transaction = {
+      id: transactionReference,
+      serviceType,
+      network,
+      phoneNumber,
+      description,
+      amount,
+      totalAmount,
+      transactionReference,
+      completedAt,
+      status: "Successful",
+    };
+
+    addTransaction(transaction);
+  }, [
+    addTransaction,
+    serviceType,
+    network,
+    phoneNumber,
+    description,
+    amount,
+    totalAmount,
+    transactionReference,
+    completedAt,
+  ]);
 
   const formatCurrency = (value: number) =>
     `₦${value.toLocaleString("en-NG", {
@@ -106,39 +149,39 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
   };
 
   // Handle the sharing of the receipt PDF
- const handleShareReceipt = async () => {
-   try {
-     setIsSharing(true);
+  const handleShareReceipt = async () => {
+    try {
+      setIsSharing(true);
 
-     const receipt = await createReceipt();
+      const receipt = await createReceipt();
 
-     if (!(await Sharing.isAvailableAsync())) {
-       Alert.alert("Unavailable", "Sharing is not available on this device.");
-       return;
-     }
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert("Unavailable", "Sharing is not available on this device.");
+        return;
+      }
 
-     const receiptUri = `${FileSystem.cacheDirectory}${receipt.fileName}`;
+      const receiptUri = `${FileSystem.cacheDirectory}${receipt.fileName}`;
 
-     await FileSystem.writeAsStringAsync(receiptUri, receipt.base64, {
-       encoding: FileSystem.EncodingType.Base64,
-     });
+      await FileSystem.writeAsStringAsync(receiptUri, receipt.base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
-     await Sharing.shareAsync(receiptUri, {
-       mimeType: "application/pdf",
-       dialogTitle: "Share PsalmoteeData Receipt",
-       UTI: "com.adobe.pdf",
-     });
-   } catch (error) {
-     console.error("Receipt sharing error:", error);
+      await Sharing.shareAsync(receiptUri, {
+        mimeType: "application/pdf",
+        dialogTitle: "Share PsalmoteeData Receipt",
+        UTI: "com.adobe.pdf",
+      });
+    } catch (error) {
+      console.error("Receipt sharing error:", error);
 
-     Alert.alert(
-       "Sharing Failed",
-       "Unable to share your receipt. Please try again.",
-     );
-   } finally {
-     setIsSharing(false);
-   }
- };
+      Alert.alert(
+        "Sharing Failed",
+        "Unable to share your receipt. Please try again.",
+      );
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -198,7 +241,7 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
         disabled={isGenerating || isSharing}
       />
 
-{/* Share Receipt Button */}
+      {/* Share Receipt Button */}
       <View style={styles.secondaryButton}>
         <AppButton
           title={isSharing ? "Preparing Receipt..." : "Share Receipt"}
@@ -215,8 +258,9 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
       <View style={styles.secondaryButton}>
         <AppButton
           title="View Transaction History"
-          variant="secondary"
-          onPress={() => navigation.navigate("ServicesHome")}
+          onPress={() => {
+            navigation.getParent()?.navigate("Transactions");
+          }}
         />
       </View>
     </ScrollView>

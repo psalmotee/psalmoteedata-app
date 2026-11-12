@@ -48,10 +48,7 @@ export default function TransactionConfirmationScreen({
    const transactionReference = `PTD-${Date.now()}`;
 
    // Capture the transaction completion date.
-   const completedAt = new Date().toLocaleString("en-NG", {
-     dateStyle: "medium",
-     timeStyle: "short",
-   });
+   const completedAt = new Date().toISOString();
 
    // Navigate to the success receipt.
    navigation.replace("TransactionSuccess", {

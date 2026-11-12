@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -10,6 +10,7 @@ type TransactionItemProps = {
   amount: string;
   status: "Successful" | "Pending" | "Failed";
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  onPress?: () => void;
 };
 
 export default function TransactionItem({
@@ -18,6 +19,7 @@ export default function TransactionItem({
   amount,
   status,
   icon,
+  onPress,
 }: TransactionItemProps) {
   const statusColor = {
     Successful: theme.colors.success,
@@ -26,7 +28,12 @@ export default function TransactionItem({
   }[status];
 
   return (
-    <View style={styles.container}>
+    <Pressable
+  style={styles.container}
+  onPress={onPress}
+  disabled={!onPress}
+  accessibilityRole="button"
+>
       <View style={styles.iconContainer}>
         <MaterialCommunityIcons
           name={icon}
@@ -45,7 +52,7 @@ export default function TransactionItem({
 
         <Text style={[styles.status, { color: statusColor }]}>{status}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
