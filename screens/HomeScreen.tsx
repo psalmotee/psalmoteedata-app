@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   View,
   Text,
@@ -8,8 +9,6 @@ import {
 
 import theme from "../constants/theme";
 
-import AppButton from "../components/AppButton";
-import AppCard from "../components/AppCard";
 import SectionHeader from "../components/SectionHeader";
 import ServiceItem from "../components/ServiceItem";
 import TransactionItem from "../components/TransactionItem";
@@ -18,6 +17,10 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { RootTabParamList } from "../navigation/TabNavigator";
+
+import TransactionDetailsModal from "../components/TransactionDetailsModal";
+import { useTransactions } from "../context/TransactionContext";
+import type { Transaction } from "../types/transaction";
 
 type Props = BottomTabScreenProps<RootTabParamList, "Home">;
 
@@ -44,89 +47,136 @@ const services = [
   },
 ] as const;
 
-const transactions = [
-  {
-    name: "Data Purchase",
-    date: "Today, 10:30 AM",
-    amount: "-₦1,500",
-    status: "Successful" as const,
-    icon: "wifi" as const,
-  },
-  {
-    name: "Airtime Purchase",
-    date: "Yesterday",
-    amount: "-₦500",
-    status: "Successful" as const,
-    icon: "cellphone" as const,
-  },
-];
-
 export default function HomeScreen({ navigation }: Props) {
+  const { transactions } = useTransactions();
+  const recentTransactions = transactions.slice(0, 3);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
+
+  const formatCurrency = (amount: number) => {
+    return `-₦${amount.toLocaleString("en-NG", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+
+    if (Number.isNaN(date.getTime())) {
+      return "Date unavailable";
+    }
+
+    return date.toLocaleString("en-NG", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Good evening 👋</Text>
-          <Text style={styles.username}>Welcome to PsalmoteeData</Text>
+    <>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Good evening 👋</Text>
+            <Text style={styles.username}>Welcome to PsalmoteeData</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.notificationButton}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons
+              name="bell-outline"
+              size={23}
+              color={theme.colors.text}
+            />
+
+            <View style={styles.notificationBadge} />
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
-          <MaterialCommunityIcons
-            name="bell-outline"
-            size={23}
-            color={theme.colors.text}
+        {/* Wallet */}
+        <WalletCard balance="₦25,000.00" />
+
+        {/* Quick Services */}
+        <View style={styles.section}>
+          <SectionHeader
+            title="Quick Services"
+            actionLabel="View all"
+            onActionPress={() =>
+              navigation.navigate("Services", {
+                screen: "ServicesHome",
+              })
+            }
           />
 
-          <View style={styles.notificationBadge} />
-        </TouchableOpacity>
-      </View>
+          <View style={styles.servicesGrid}>
+            {services.map((service) => (
+              <ServiceItem
+                key={service.name}
+                name={service.name}
+                icon={service.icon}
+                color={service.color}
+                onPress={() => {
+                  if (service.name === "Airtime") {
+                    navigation.navigate("Services", {
+                      screen: "AirtimePurchase",
+                    });
+                  }
 
-      {/* Wallet */}
-      <WalletCard balance="₦25,000.00" />
-
-      {/* Quick Services */}
-      <View style={styles.section}>
-        <SectionHeader title="Quick Services" actionLabel="View all" />
-
-        <View style={styles.servicesGrid}>
-          {services.map((service) => (
-            <ServiceItem
-              key={service.name}
-              name={service.name}
-              icon={service.icon}
-              color={service.color}
-              onPress={() => {
-                if (service.name === "Airtime") {
-                  navigation.navigate("Services", {
-                    screen: "AirtimePurchase",
-                  });
-                }
-
-                if (service.name === "Data") {
-                  navigation.navigate("Services", {
-                    screen: "DataPurchase",
-                  });
-                }
-              }}
-            />
-          ))}
+                  if (service.name === "Data") {
+                    navigation.navigate("Services", {
+                      screen: "DataPurchase",
+                    });
+                  }
+                }}
+              />
+            ))}
+          </View>
         </View>
-      </View>
 
-      {/* Recent Transactions */}
-      <View style={styles.section}>
-        <SectionHeader title="Recent Transactions" actionLabel="See all" />
+        {/* Recent Transactions */}
+        <View style={styles.section}>
+          <SectionHeader
+            title="Recent Transactions"
+            actionLabel="See all"
+            onActionPress={() => navigation.navigate("Transactions")}
+          />
 
-        {transactions.map((transaction) => (
-          <TransactionItem key={transaction.name} {...transaction} />
-        ))}
-      </View>
-    </ScrollView>
+          {recentTransactions.length > 0 ? (
+            recentTransactions.map((transaction) => (
+              <TransactionItem
+                key={transaction.id}
+                name={`${transaction.network} ${transaction.serviceType}`}
+                date={`${formatDate(transaction.completedAt)} • ${transaction.phoneNumber}`}
+                amount={formatCurrency(transaction.totalAmount)}
+                status={transaction.status}
+                icon={transaction.serviceType === "Data" ? "wifi" : "cellphone"}
+                onPress={() => setSelectedTransaction(transaction)}
+              />
+            ))
+          ) : (
+            <Text style={styles.emptyText}>
+              No transactions yet. Your recent purchases will appear here.
+            </Text>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Transaction Details Modal */}
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+      />
+    </>
   );
 }
 
@@ -191,5 +241,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+  },
+
+  emptyText: {
+    color: theme.colors.muted,
+    fontSize: theme.typography.fontSize.sm,
+    fontFamily: theme.typography.fontFamily.body,
+    textAlign: "center",
+    paddingVertical: theme.spacing.xl,
   },
 });
