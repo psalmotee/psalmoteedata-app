@@ -104,13 +104,18 @@ export default function ProfileScreen({ navigation }: Props) {
               key={option.title}
               activeOpacity={0.75}
               style={styles.optionCard}
-              onPress={() =>
+              onPress={() => {
+                if (option.title === "Update Account") {
+                  navigation.navigate("UpdateAccount");
+                  return;
+                }
+
                 navigation.navigate("AccountFeature", {
                   title: option.title,
                   description: option.description,
                   icon: option.icon,
-                })
-              }
+                });
+              }}
             >
               <View style={styles.optionIcon}>
                 <MaterialCommunityIcons
