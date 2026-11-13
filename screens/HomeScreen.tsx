@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import theme from "../constants/theme";
 
@@ -16,7 +17,7 @@ import TransactionItem from "../components/TransactionItem";
 import DashboardCardsCarousel from "../components/DashboardCardsCarousel";
 import VirtualAccountsSection from "../components/VirtualAccountsSection";
 import { useWallet } from "../context/WalletContext";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import HelpSupportSection from "../components/HelpSupportSection";
 
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -91,6 +92,24 @@ export default function HomeScreen({ navigation }: Props) {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const handleHelpPress = () => {
+    Alert.alert(
+      "Help Centre",
+      "FAQs and user guides will be available here soon.",
+    );
+  };
+
+  const handleSupportPress = () => {
+    Alert.alert(
+      "Customer Support",
+      "Customer support options will be available here soon.",
+    );
+  };
+
+  const handleCommunityPress = () => {
+    Alert.alert("Community", "Our community link will be available here soon.");
   };
   return (
     <>
@@ -202,6 +221,13 @@ export default function HomeScreen({ navigation }: Props) {
             </Text>
           )}
         </View>
+
+        {/* Help & Support */}
+        <HelpSupportSection
+          onHelpPress={handleHelpPress}
+          onSupportPress={handleSupportPress}
+          onCommunityPress={handleCommunityPress}
+        />
       </ScrollView>
 
       {/* Transaction Details Modal */}
