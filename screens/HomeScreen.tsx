@@ -129,6 +129,7 @@ export default function HomeScreen({ navigation }: Props) {
           <TouchableOpacity
             style={styles.notificationButton}
             activeOpacity={0.7}
+            onPress={() => navigation.navigate("Notifications")}
           >
             <MaterialCommunityIcons
               name="bell-outline"
