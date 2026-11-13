@@ -13,46 +13,14 @@ import * as Clipboard from "expo-clipboard";
 import colors from "../constants/colors";
 import typography from "../constants/typography";
 import AppCard from "./AppCard";
-
-type VirtualAccount = {
-  id: string;
-  bankName: string;
-  accountName: string;
-  accountNumber: string;
-  gateway: string;
-  charges: string;
-};
-
-const MOCK_ACCOUNTS: VirtualAccount[] = [
-  {
-    id: "1",
-    bankName: "Wema Bank",
-    accountName: "PSALMOTEEDATA / JOHN DOE",
-    accountNumber: "1234567890",
-    gateway: "Paystack",
-    charges: "To be confirmed",
-  },
-  {
-    id: "2",
-    bankName: "Sterling Bank",
-    accountName: "PSALMOTEEDATA / JOHN DOE",
-    accountNumber: "0987654321",
-    gateway: "Paystack",
-    charges: "To be confirmed",
-  },
-  {
-    id: "3",
-    bankName: "Moniepoint",
-    accountName: "PSALMOTEEDATA / JOHN DOE",
-    accountNumber: "1122334455",
-    gateway: "Paystack",
-    charges: "To be confirmed",
-  },
-];
+import {
+  MOCK_VIRTUAL_ACCOUNTS,
+  type VirtualAccount,
+} from "../data/virtualAccounts";
 
 export default function VirtualAccountsSection() {
   const [selectedAccount, setSelectedAccount] = useState<VirtualAccount>(
-    MOCK_ACCOUNTS[0],
+    MOCK_VIRTUAL_ACCOUNTS[0],
   );
 
   const handleCopyAccount = async () => {
@@ -92,7 +60,7 @@ export default function VirtualAccountsSection() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.bankSelector}
       >
-        {MOCK_ACCOUNTS.map((account) => {
+        {MOCK_VIRTUAL_ACCOUNTS.map((account) => {
           const isSelected = selectedAccount.id === account.id;
 
           return (
