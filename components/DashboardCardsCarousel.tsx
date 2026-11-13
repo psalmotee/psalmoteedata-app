@@ -1,18 +1,17 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
-  Linking,
   PanResponder,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import WalletCard from "./WalletCard";
+import CommissionCard from "./CommissionCard";
+import RetailerPromotionCard from "./RetailerPromotionCard";
+
 import colors from "../constants/colors";
 import typography from "../constants/typography";
 
@@ -46,12 +45,6 @@ export default function DashboardCardsCarousel({
   const translateX = useRef(new Animated.Value(0)).current;
 
   const cardWidth = width - 32 - 22;
-
-  const formatCurrency = (amount: number) =>
-    `₦${amount.toLocaleString("en-NG", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
 
   const changeCard = useCallback(
     (direction: number) => {
@@ -125,81 +118,10 @@ export default function DashboardCardsCarousel({
         );
 
       case "commissions":
-        return (
-          <LinearGradient
-            colors={["#064E3B", "#047857", "#059669"]}
-            style={styles.infoCard}
-          >
-            <View style={styles.cardTopRow}>
-              <View style={styles.iconContainer}>
-                <MaterialCommunityIcons
-                  name="wallet-plus-outline"
-                  size={23}
-                  color="#FFFFFF"
-                />
-              </View>
-
-              <Text style={styles.cardBadge}>YOUR EARNINGS</Text>
-            </View>
-
-            <Text style={styles.cardTitle}>Total Commissions</Text>
-
-            <Text style={styles.commissionAmount}>
-              {formatCurrency(commissions)}
-            </Text>
-
-            <Text style={styles.cardDescription}>
-              Earnings from your referrals and transactions.
-            </Text>
-          </LinearGradient>
-        );
+        return <CommissionCard commissions={commissions} />;
 
       case "promotion":
-        return (
-          <LinearGradient
-            colors={["#9A3412", "#C2410C", "#EA580C"]}
-            style={styles.infoCard}
-          >
-            <View style={styles.cardTopRow}>
-              <View style={styles.iconContainer}>
-                <MaterialCommunityIcons
-                  name="star-four-points"
-                  size={21}
-                  color="#FFFFFF"
-                />
-              </View>
-
-              <Text style={styles.newBadge}>★ NEW</Text>
-            </View>
-
-            <Text style={styles.cardTitle}>Own a Retailer Website</Text>
-
-            <Text style={styles.cardDescription}>
-              Retail our services, including data and airtime, with your own
-              website. You can also earn through our referral programme.
-            </Text>
-
-            <Text
-              style={styles.viewLink}
-              onPress={async () => {
-                const url = "https://wa.me/2348058461612";
-
-                try {
-                  await Linking.openURL(url);
-                } catch {
-                  Alert.alert("Unable to open link", "Please try again later.");
-                }
-              }}
-            >
-              View details
-              <MaterialCommunityIcons
-                name="arrow-top-right"
-                size={15}
-                color="#FFFFFF"
-              />
-            </Text>
-          </LinearGradient>
-        );
+        return <RetailerPromotionCard />;
 
       default:
         return null;
@@ -276,74 +198,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     left: 0,
-  },
-
-  infoCard: {
-    minHeight: 200,
-    borderRadius: 20,
-    padding: 20,
-    justifyContent: "space-between",
-  },
-
-  cardTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  iconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  cardBadge: {
-    color: "#D1FAE5",
-    fontSize: 10,
-    fontFamily: typography.fontFamily.bold,
-    letterSpacing: 1,
-  },
-
-  newBadge: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontFamily: typography.fontFamily.bold,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-
-  cardTitle: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontFamily: typography.fontFamily.heading,
-    marginTop: 12,
-  },
-
-  commissionAmount: {
-    color: "#FFFFFF",
-    fontSize: 29,
-    fontFamily: typography.fontFamily.bold,
-    marginTop: 5,
-  },
-
-  cardDescription: {
-    color: "rgba(255,255,255,0.85)",
-    fontSize: 12,
-    fontFamily: typography.fontFamily.body,
-    lineHeight: 19,
-    marginTop: 8,
-  },
-
-  viewLink: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontFamily: typography.fontFamily.bold,
-    marginTop: 12,
   },
 
   pagination: {
