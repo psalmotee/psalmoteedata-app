@@ -9,8 +9,9 @@ import {
   DMSans_700Bold,
 } from "@expo-google-fonts/dm-sans";
 
-import TabNavigator from "./navigation/TabNavigator";
+import RootStackNavigator from "./navigation/RootStackNavigator";
 import { TransactionProvider } from "./context/TransactionContext";
+import { WalletProvider } from "./context/WalletContext";
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -29,11 +30,13 @@ export default function App() {
   }
 
   return (
-    <TransactionProvider>
-      <NavigationContainer>
-        <StatusBar style="light" />
-        <TabNavigator />
-      </NavigationContainer>
-    </TransactionProvider>
+    <WalletProvider>
+      <TransactionProvider>
+        <NavigationContainer>
+          <StatusBar style="light" />
+          <RootStackNavigator />
+        </NavigationContainer>
+      </TransactionProvider>
+    </WalletProvider>
   );
 }

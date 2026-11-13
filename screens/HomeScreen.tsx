@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 
 import theme from "../constants/theme";
@@ -13,16 +14,24 @@ import SectionHeader from "../components/SectionHeader";
 import ServiceItem from "../components/ServiceItem";
 import TransactionItem from "../components/TransactionItem";
 import WalletCard from "../components/WalletCard";
+import { useWallet } from "../context/WalletContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+
 import type { RootTabParamList } from "../navigation/TabNavigator";
+import type { RootStackParamList } from "../navigation/RootStackNavigator";
 
 import TransactionDetailsModal from "../components/TransactionDetailsModal";
 import { useTransactions } from "../context/TransactionContext";
 import type { Transaction } from "../types/transaction";
 
-type Props = BottomTabScreenProps<RootTabParamList, "Home">;
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<RootTabParamList, "Home">,
+  NativeStackScreenProps<RootStackParamList>
+>;
 
 const services = [
   {
@@ -48,10 +57,17 @@ const services = [
 ] as const;
 
 export default function HomeScreen({ navigation }: Props) {
+  const { balance } = useWallet();
   const { transactions } = useTransactions();
   const recentTransactions = transactions.slice(0, 3);
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
+  const formatBalance = (amount: number) => {
+    return `₦${amount.toLocaleString("en-NG", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
 
   const formatCurrency = (amount: number) => {
     return `-₦${amount.toLocaleString("en-NG", {
@@ -104,7 +120,14 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         {/* Wallet */}
-        <WalletCard balance="₦25,000.00" />
+        <WalletCard
+          balance={formatBalance(balance)}
+          packageName="Customer"
+          onFundWallet={() => navigation.navigate("FundWallet")}
+          onViewHistory={() =>
+            Alert.alert("Wallet History", "Wallet history screen coming soon.")
+          }
+        />
 
         {/* Quick Services */}
         <View style={styles.section}>
