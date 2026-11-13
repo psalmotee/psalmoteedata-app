@@ -13,11 +13,12 @@ import theme from "../constants/theme";
 
 import SectionHeader from "../components/SectionHeader";
 import ServiceItem from "../components/ServiceItem";
-import TransactionItem from "../components/TransactionItem";
+import AnnouncementBanner from "../components/AnnouncementBanner";
 import DashboardCardsCarousel from "../components/DashboardCardsCarousel";
 import VirtualAccountsSection from "../components/VirtualAccountsSection";
 import { useWallet } from "../context/WalletContext";
 import HelpSupportSection from "../components/HelpSupportSection";
+import TransactionItem from "../components/TransactionItem";
 
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -138,6 +139,18 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={styles.notificationBadge} />
           </TouchableOpacity>
         </View>
+
+        {/* Announcement Banner */}
+        <AnnouncementBanner
+          title="Welcome to PsalmoteeData!"
+          message="Enjoy convenient access to airtime, data and other digital services."
+          onPress={() =>
+            Alert.alert(
+              "Platform Updates",
+              "More announcements and platform updates will be available here soon.",
+            )
+          }
+        />
 
         {/* Dashboard Cards Carousel */}
         <View style={styles.section}>
