@@ -14,6 +14,7 @@ import SectionHeader from "../components/SectionHeader";
 import ServiceItem from "../components/ServiceItem";
 import TransactionItem from "../components/TransactionItem";
 import DashboardCardsCarousel from "../components/DashboardCardsCarousel";
+import VirtualAccountsSection from "../components/VirtualAccountsSection";
 import { useWallet } from "../context/WalletContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -119,7 +120,7 @@ export default function HomeScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
-          {/* Dashboard Cards Carousel */}
+        {/* Dashboard Cards Carousel */}
         <View style={styles.section}>
           <DashboardCardsCarousel
             balance={formatBalance(balance)}
@@ -134,6 +135,9 @@ export default function HomeScreen({ navigation }: Props) {
             }
           />
         </View>
+
+        {/* Virtual Accounts */}
+        <VirtualAccountsSection />
 
         {/* Quick Services */}
         <View style={styles.section}>
