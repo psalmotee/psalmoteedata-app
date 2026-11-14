@@ -161,7 +161,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Server-side revocation is attempted after local cleanup.
       if (token) {
-        await authApi.logout(token);
+        try {
+          await authApi.logout(token);
+        } catch (err) {
+          // These responses mean the session is already invalid.
+          // The user is effectively signed out.
+          if (
+            err instanceof ApiError &&
+            (err.status === 401 || err.code === "account_suspended")
+          ) {
+            return;
+          }
+
+          // Preserve genuine network and server errors.
+          throw err;
+        }
       }
     } finally {
       logoutInProgressRef.current = false;
