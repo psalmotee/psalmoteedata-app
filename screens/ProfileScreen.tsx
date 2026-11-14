@@ -1,4 +1,8 @@
+import { useState } from "react";
+
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,6 +13,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import theme from "../constants/theme";
+import { useAuth } from "../context/AuthContext";
 
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -45,7 +50,68 @@ const accountOptions = [
   },
 ];
 
+function getInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+
+  if (words.length === 0) {
+    return "U";
+  }
+
+  return words
+    .slice(0, 2)
+    .map((word) => word.charAt(0).toUpperCase())
+    .join("");
+}
+
 export default function ProfileScreen({ navigation }: Props) {
+  const { user, logout } = useAuth();
+
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const fullName =
+    user?.display_name ||
+    [user?.first_name, user?.last_name].filter(Boolean).join(" ") ||
+    user?.username ||
+    "User";
+
+  const initials = getInitials(fullName);
+  const email = user?.email || "Email not available";
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+
+    try {
+      await logout();
+    } catch {
+      Alert.alert(
+        "Signed out on this device",
+        "Your local session has been cleared, but the server could not confirm the sign-out. Your previous server token may remain valid until it expires.",
+      );
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const confirmLogout = () => {
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out of your PsalmoteeData account?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: () => {
+            void handleLogout();
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <ScrollView
       style={styles.container}
@@ -64,13 +130,13 @@ export default function ProfileScreen({ navigation }: Props) {
       {/* Profile Card */}
       <View style={styles.profileCard}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>MS</Text>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
 
         <View style={styles.profileInfo}>
-          <Text style={styles.userName}>Moradeyo Samson</Text>
+          <Text style={styles.userName}>{fullName}</Text>
 
-          <Text style={styles.userEmail}>psalmoteetelecoms@gmail.com</Text>
+          <Text style={styles.userEmail}>{email}</Text>
 
           <View style={styles.accountBadge}>
             <MaterialCommunityIcons
@@ -141,6 +207,26 @@ export default function ProfileScreen({ navigation }: Props) {
             </TouchableOpacity>
           ))}
         </View>
+      </View>
+
+      {/* Sign Out */}
+      <View style={styles.logoutSection}>
+        <TouchableOpacity
+          style={[styles.logoutButton, isLoggingOut && styles.disabledButton]}
+          activeOpacity={0.75}
+          onPress={confirmLogout}
+          disabled={isLoggingOut}
+        >
+          {isLoggingOut ? (
+            <ActivityIndicator color="#F87171" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="logout" size={21} color="#F87171" />
+
+              <Text style={styles.logoutButtonText}>Sign Out</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -297,5 +383,32 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.fontFamily.body,
     lineHeight: 17,
     marginTop: 4,
+  },
+
+  logoutSection: {
+    marginTop: theme.spacing["3xl"],
+  },
+
+  logoutButton: {
+    minHeight: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.sm,
+    backgroundColor: "rgba(248,113,113,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(248,113,113,0.25)",
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+  },
+
+  logoutButtonText: {
+    color: "#F87171",
+    fontSize: theme.typography.fontSize.sm,
+    fontFamily: theme.typography.fontFamily.semibold,
+  },
+
+  disabledButton: {
+    opacity: 0.6,
   },
 });
