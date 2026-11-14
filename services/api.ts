@@ -3,6 +3,7 @@ import type {
   LoginResponse,
   MeResponse,
   LogoutResponse,
+  HeartbeatResponse,
 } from "../types/auth";
 
 const API_BASE_URL =
@@ -16,7 +17,21 @@ type RequestOptions = {
 
 type ApiErrorResponse = {
   message?: string;
+  code?: string;
 };
+
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
 
 async function apiRequest<T>(
   endpoint: string,
@@ -59,8 +74,10 @@ async function apiRequest<T>(
   if (!response.ok) {
     const errorData = data as ApiErrorResponse;
 
-    throw new Error(
+    throw new ApiError(
       errorData.message || "Something went wrong. Please try again.",
+      response.status,
+      errorData.code,
     );
   }
 
@@ -78,6 +95,13 @@ export const authApi = {
   getMe(token: string): Promise<MeResponse> {
     return apiRequest<MeResponse>("/me", {
       method: "GET",
+      token,
+    });
+  },
+
+  heartbeat(token: string): Promise<HeartbeatResponse> {
+    return apiRequest<HeartbeatResponse>("/heartbeat", {
+      method: "POST",
       token,
     });
   },

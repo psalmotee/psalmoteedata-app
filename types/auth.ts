@@ -30,3 +30,9 @@ export type LogoutResponse = {
   success: boolean;
   message: string;
 };
+
+export type HeartbeatResponse = {
+  success: boolean;
+  message: string;
+  server_time: string;
+};
