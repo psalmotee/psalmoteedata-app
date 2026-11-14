@@ -84,6 +84,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       lastActivityAtRef.current = Date.now();
       setUser(response.user);
     } catch (err) {
+      // Clear the stored token if the backend has invalidated this session.
+      if (
+        err instanceof ApiError &&
+        (err.status === 401 || err.code === "account_suspended")
+      ) {
+        try {
+          await clearAuthToken();
+        } catch {
+          // Continue even if secure storage cleanup fails.
+        }
+      }
+
       setUser(null);
 
       setError(
@@ -199,7 +211,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await authApi.heartbeat(token);
     } catch (err) {
       // A 401 means the server no longer accepts this session.
-      if (err instanceof ApiError && err.status === 401) {
+      // Expire the local session if the backend invalidates it.
+      if (
+        err instanceof ApiError &&
+        (err.status === 401 || err.code === "account_suspended")
+      ) {
         await expireSession();
       }
 

@@ -8,8 +8,10 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 
+import PsalmoteeDataLogo from "../assets/images/psalmoteedata-logo.png";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import theme from "../constants/theme";
@@ -62,11 +64,7 @@ export default function LoginScreen() {
       >
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <MaterialCommunityIcons
-              name="cellphone-wireless"
-              size={38}
-              color={theme.colors.primary}
-            />
+            <Image source={PsalmoteeDataLogo} style={styles.logo} />
           </View>
 
           <Text style={styles.brandName}>PsalmoteeData</Text>
@@ -186,6 +184,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: theme.spacing.md,
+  },
+  
+  logo: {
+    width: 50,
+    height: 50,
+    resizeMode: "contain",
   },
 
   brandName: {
