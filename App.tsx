@@ -1,6 +1,7 @@
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import { NavigationContainer } from "@react-navigation/native";
+import { AuthProvider } from "./context/AuthContext";
 
 import {
   DMSans_400Regular,
@@ -32,10 +33,12 @@ export default function App() {
   return (
     <WalletProvider>
       <TransactionProvider>
-        <NavigationContainer>
-          <StatusBar style="light" />
-          <RootStackNavigator />
-        </NavigationContainer>
+        <AuthProvider>
+          <NavigationContainer>
+            <StatusBar style="light" />
+            <RootStackNavigator />
+          </NavigationContainer>
+        </AuthProvider>
       </TransactionProvider>
     </WalletProvider>
   );
