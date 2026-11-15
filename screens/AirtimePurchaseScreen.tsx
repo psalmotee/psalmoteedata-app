@@ -7,6 +7,7 @@ import {
   TextInput,
   Alert,
 } from "react-native";
+import { useAuth } from "../context/AuthContext";
 
 import { useState } from "react";
 import theme from "../constants/theme";
@@ -30,6 +31,7 @@ const quickAmounts = [100, 200, 500, 1000, 2000, 5000];
 type Props = NativeStackScreenProps<ServicesStackParamList, "AirtimePurchase">;
 
 export default function AirtimePurchaseScreen({ navigation }: Props) {
+  const { recordActivity } = useAuth();
   const [selectedNetwork, setSelectedNetwork] = useState("mtn");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [amount, setAmount] = useState("");
@@ -111,8 +113,10 @@ export default function AirtimePurchaseScreen({ navigation }: Props) {
             keyboardType="number-pad"
             value={amount}
             onChangeText={(value) => {
+              recordActivity();
               setAmount(value.replace(/[^0-9]/g, ""));
             }}
+            onFocus={recordActivity}
           />
         </View>
 

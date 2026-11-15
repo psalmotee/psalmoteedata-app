@@ -30,6 +30,7 @@ type AuthContextType = {
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
   retrySession: () => Promise<void>;
+  recordActivity: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -402,8 +403,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     retrySession: restoreSession,
+    recordActivity,
   };
-
+  
   return (
     <AuthContext.Provider value={value}>
       <View style={{ flex: 1 }} onTouchStart={recordActivity}>

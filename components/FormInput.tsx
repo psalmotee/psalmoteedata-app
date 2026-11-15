@@ -1,4 +1,5 @@
 import { StyleSheet, Text, TextInput, View } from "react-native";
+import { useAuth } from "../context/AuthContext";
 
 import theme from "../constants/theme";
 
@@ -12,6 +13,10 @@ type Props = {
   multiline?: boolean;
   secureTextEntry?: boolean;
   keyboardType?: "default" | "email-address" | "numeric" | "phone-pad";
+  autoComplete?: "off" | "username" | "current-password";
+  textContentType?: "none" | "username" | "password";
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  onFocus?: () => void;
 };
 
 export default function FormInput({
@@ -24,14 +29,24 @@ export default function FormInput({
   multiline = false,
   secureTextEntry = false,
   keyboardType = "default",
+  autoComplete = "off",
+  textContentType = "none",
+  autoCapitalize = "sentences",
+  onFocus,
 }: Props) {
+
+  const { recordActivity } = useAuth();
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
 
       <TextInput
         value={value}
-        onChangeText={onChangeText}
+        onChangeText={(text) => {
+          recordActivity();
+          onChangeText(text);
+        }}
         placeholder={placeholder}
         placeholderTextColor={theme.colors.muted}
         secureTextEntry={secureTextEntry}
@@ -39,6 +54,13 @@ export default function FormInput({
         maxLength={maxLength}
         multiline={multiline}
         textAlignVertical={multiline ? "top" : "center"}
+        autoComplete={autoComplete}
+        textContentType={textContentType}
+        autoCapitalize={autoCapitalize}
+        onFocus={() => {
+          recordActivity();
+          onFocus?.();
+        }}
         style={[styles.input, multiline && styles.multilineInput]}
       />
 

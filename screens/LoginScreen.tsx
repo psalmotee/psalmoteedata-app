@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -26,12 +26,23 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const autoLoginTriggeredRef = useRef(false);
+  const loginInProgressRef = useRef(false);
 
-  const handleLogin = async () => {
-    if (!username.trim() || !password) {
-      setError("Please enter your username and password.");
+  const handleLogin = async (isAutoLogin = false) => {
+    if (loginInProgressRef.current) {
       return;
     }
+
+    if (!username.trim() || !password) {
+      if (!isAutoLogin) {
+        setError("Please enter your username and password.");
+      }
+
+      return;
+    }
+
+    loginInProgressRef.current = true;
 
     setError(null);
     setIsSubmitting(true);
@@ -48,9 +59,35 @@ export default function LoginScreen() {
           : "Unable to sign in. Please try again.",
       );
     } finally {
+      loginInProgressRef.current = false;
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (!username.trim() || !password) {
+      autoLoginTriggeredRef.current = false;
+      return;
+    }
+
+    if (autoLoginTriggeredRef.current || loginInProgressRef.current) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      if (
+        username.trim() &&
+        password &&
+        !autoLoginTriggeredRef.current &&
+        !loginInProgressRef.current
+      ) {
+        autoLoginTriggeredRef.current = true;
+        void handleLogin(true);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [username, password]);
 
   return (
     <KeyboardAvoidingView
@@ -86,6 +123,9 @@ export default function LoginScreen() {
             value={username}
             onChangeText={setUsername}
             placeholder="Enter your username"
+            autoComplete="username"
+            textContentType="username"
+            autoCapitalize="none"
           />
 
           <View>
@@ -95,6 +135,9 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               placeholder="Enter your password"
               secureTextEntry={!showPassword}
+              autoComplete="current-password"
+              textContentType="password"
+              autoCapitalize="none"
             />
 
             <TouchableOpacity
@@ -185,7 +228,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: theme.spacing.md,
   },
-  
+
   logo: {
     width: 50,
     height: 50,

@@ -1,5 +1,5 @@
-import { View, Text, TextInput, StyleSheet } from "react-native";
-
+import { StyleSheet, Text, TextInput, View } from "react-native";
+import { useAuth } from "../context/AuthContext";
 import theme from "../constants/theme";
 
 type PhoneNumberInputProps = {
@@ -17,7 +17,11 @@ export default function PhoneNumberInput({
   placeholder = "Enter phone number",
   helperText = "Enter the 11-digit mobile number.",
 }: PhoneNumberInputProps) {
+  const { recordActivity } = useAuth();
+
   const handleChange = (text: string) => {
+    recordActivity();
+
     const numericValue = text.replace(/[^0-9]/g, "").slice(0, 11);
     onChangeText(numericValue);
   };
@@ -34,6 +38,7 @@ export default function PhoneNumberInput({
         maxLength={11}
         value={value}
         onChangeText={handleChange}
+        onFocus={recordActivity}
       />
 
       <Text style={styles.helperText}>{helperText}</Text>
