@@ -1,4 +1,7 @@
 import { useRef, useState, useEffect } from "react";
+
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../navigation/RootStackNavigator";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -18,7 +21,9 @@ import theme from "../constants/theme";
 import FormInput from "../components/FormInput";
 import { useAuth } from "../context/AuthContext";
 
-export default function LoginScreen() {
+type Props = NativeStackScreenProps<RootStackParamList, "Login">;
+
+export default function LoginScreen({ navigation }: Props) {
   const { login } = useAuth();
 
   const [username, setUsername] = useState("");
@@ -167,7 +172,7 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             style={[styles.loginButton, isSubmitting && styles.disabledButton]}
-            onPress={handleLogin}
+            onPress={() => handleLogin()}
             disabled={isSubmitting}
             activeOpacity={0.8}
           >
@@ -185,6 +190,16 @@ export default function LoginScreen() {
               </>
             )}
           </TouchableOpacity>
+
+          <View style={styles.registerPrompt}>
+            <Text style={styles.registerPromptText}>
+              Don't have an account?
+            </Text>
+
+            <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+              <Text style={styles.registerLink}>Create Account</Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.footerText}>
             Securely access your PsalmoteeData account.
@@ -315,6 +330,26 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: theme.typography.fontSize.sm,
     fontFamily: theme.typography.fontFamily.bold,
+  },
+
+  registerPrompt: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.xl,
+  },
+
+  registerPromptText: {
+    color: theme.colors.muted,
+    fontSize: theme.typography.fontSize.xs,
+    fontFamily: theme.typography.fontFamily.body,
+  },
+
+  registerLink: {
+    color: theme.colors.primary,
+    fontSize: theme.typography.fontSize.xs,
+    fontFamily: theme.typography.fontFamily.semibold,
   },
 
   footerText: {

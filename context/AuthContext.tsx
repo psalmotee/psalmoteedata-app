@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { AppState, View, type AppStateStatus } from "react-native";
+import { AppState, View } from "react-native";
 
 import type { AuthUser, LoginCredentials } from "../types/auth";
 import { ApiError, authApi } from "../services/api";
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const lastActivityAtRef = useRef<number>(Date.now());
   const backgroundAtRef = useRef<number | null>(null);
 
-  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+const appStateRef = useRef<typeof AppState.currentState>(AppState.currentState);
 
   const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null,

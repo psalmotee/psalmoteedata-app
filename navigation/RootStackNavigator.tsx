@@ -2,6 +2,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
+import RegisterScreen from "../screens/RegisterScreen";
 import TabNavigator from "./TabNavigator";
 import FundWalletScreen from "../screens/FundWalletScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
@@ -14,6 +15,7 @@ import theme from "../constants/theme";
 
 export type RootStackParamList = {
   Login: undefined;
+  Register: undefined;
   Main: undefined;
   FundWallet: undefined;
   Notifications: undefined;
@@ -52,7 +54,10 @@ export default function RootStackNavigator() {
       }}
     >
       {!isAuthenticated ? (
-        <Stack.Screen name="Login" component={LoginScreen} />
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+        </>
       ) : (
         <>
           <Stack.Screen name="Main" component={TabNavigator} />

@@ -1,4 +1,8 @@
 import type {
+  RegistrationCredentials,
+  RegistrationResponse,
+  CountriesResponse,
+  RegistrationConfigResponse,
   LoginCredentials,
   LoginResponse,
   MeResponse,
@@ -85,6 +89,27 @@ async function apiRequest<T>(
 }
 
 export const authApi = {
+  register(
+    credentials: RegistrationCredentials,
+  ): Promise<RegistrationResponse> {
+    return apiRequest<RegistrationResponse>("/register", {
+      method: "POST",
+      body: credentials,
+    });
+  },
+
+  getCountries(): Promise<CountriesResponse> {
+    return apiRequest<CountriesResponse>("/countries", {
+      method: "GET",
+    });
+  },
+
+  getRegistrationConfig(): Promise<RegistrationConfigResponse> {
+    return apiRequest<RegistrationConfigResponse>("/registration-config", {
+      method: "GET",
+    });
+  },
+
   login(credentials: LoginCredentials): Promise<LoginResponse> {
     return apiRequest<LoginResponse>("/login", {
       method: "POST",
