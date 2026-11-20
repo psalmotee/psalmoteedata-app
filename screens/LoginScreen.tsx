@@ -201,6 +201,37 @@ export default function LoginScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
+          <TouchableOpacity
+            style={styles.activationButton}
+            onPress={() => navigation.navigate("Activation")}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons
+              name="email-check-outline"
+              size={19}
+              color={theme.colors.primary}
+            />
+
+            <Text style={styles.activationButtonText}>Activate Account</Text>
+          </TouchableOpacity>
+
+          {/* Support Button */}
+          <TouchableOpacity
+            style={styles.supportButton}
+            onPress={() => navigation.navigate("Support")}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons
+              name="help-circle-outline"
+              size={18}
+              color={theme.colors.primary}
+            />
+
+            <Text style={styles.supportButtonText}>
+              Need help? Contact Support
+            </Text>
+          </TouchableOpacity>
+
           <Text style={styles.footerText}>
             Securely access your PsalmoteeData account.
           </Text>
@@ -350,6 +381,36 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontSize: theme.typography.fontSize.xs,
     fontFamily: theme.typography.fontFamily.semibold,
+  },
+
+  activationButton: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+
+  activationButtonText: {
+    fontSize: theme.typography.fontSize.sm,
+    fontFamily: theme.typography.fontFamily.medium,
+    color: theme.colors.primary,
+    marginLeft: theme.spacing.sm,
+  },
+
+  supportButton: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+  },
+
+  supportButtonText: {
+    fontSize: theme.typography.fontSize.sm,
+    fontFamily: theme.typography.fontFamily.medium,
+    color: theme.colors.primary,
+    marginLeft: theme.spacing.xs,
   },
 
   footerText: {

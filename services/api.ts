@@ -1,11 +1,11 @@
 import type {
+  LoginCredentials,
+  LoginResponse,
+  MeResponse,
   RegistrationCredentials,
   RegistrationResponse,
   CountriesResponse,
   RegistrationConfigResponse,
-  LoginCredentials,
-  LoginResponse,
-  MeResponse,
   LogoutResponse,
   HeartbeatResponse,
 } from "../types/auth";
@@ -22,6 +22,19 @@ type RequestOptions = {
 type ApiErrorResponse = {
   message?: string;
   code?: string;
+};
+
+export type ActivationResponse = {
+  success: boolean;
+  message: string;
+  user?: {
+    username: string;
+  };
+};
+
+export type ResendActivationResponse = {
+  success: boolean;
+  message: string;
 };
 
 export class ApiError extends Error {
@@ -89,6 +102,20 @@ async function apiRequest<T>(
 }
 
 export const authApi = {
+  login(credentials: LoginCredentials): Promise<LoginResponse> {
+    return apiRequest<LoginResponse>("/login", {
+      method: "POST",
+      body: credentials,
+    });
+  },
+
+  getMe(token: string): Promise<MeResponse> {
+    return apiRequest<MeResponse>("/me", {
+      method: "GET",
+      token,
+    });
+  },
+
   register(
     credentials: RegistrationCredentials,
   ): Promise<RegistrationResponse> {
@@ -110,17 +137,25 @@ export const authApi = {
     });
   },
 
-  login(credentials: LoginCredentials): Promise<LoginResponse> {
-    return apiRequest<LoginResponse>("/login", {
+  activateAccount(
+    identifier: string,
+    activation_code: string,
+  ): Promise<ActivationResponse> {
+    return apiRequest<ActivationResponse>("/activate", {
       method: "POST",
-      body: credentials,
+      body: {
+        identifier,
+        activation_code,
+      },
     });
   },
 
-  getMe(token: string): Promise<MeResponse> {
-    return apiRequest<MeResponse>("/me", {
-      method: "GET",
-      token,
+  resendActivation(identifier: string): Promise<ResendActivationResponse> {
+    return apiRequest<ResendActivationResponse>("/resend-activation", {
+      method: "POST",
+      body: {
+        identifier,
+      },
     });
   },
 

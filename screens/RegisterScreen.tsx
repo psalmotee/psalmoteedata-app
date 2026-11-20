@@ -268,10 +268,23 @@ export default function RegisterScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={styles.primaryButton}
-          onPress={() => navigation.navigate("Login")}
+          onPress={() => {
+            if (registrationResult.verification_required) {
+              navigation.navigate("Activation", {
+                username: registrationResult.user.username,
+                email: registrationResult.user.email,
+              });
+            } else {
+              navigation.navigate("Login");
+            }
+          }}
           activeOpacity={0.8}
         >
-          <Text style={styles.primaryButtonText}>Continue to Sign In</Text>
+          <Text style={styles.primaryButtonText}>
+            {registrationResult.verification_required
+              ? "Verify Account"
+              : "Continue to Sign In"}
+          </Text>
 
           <MaterialCommunityIcons
             name="arrow-right"

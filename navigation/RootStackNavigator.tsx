@@ -2,13 +2,16 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
+import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
+import ActivationScreen from "../screens/ActivationScreen";
+import SupportScreen from "../screens/SupportScreen";
+
 import TabNavigator from "./TabNavigator";
 import FundWalletScreen from "../screens/FundWalletScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import AccountFeatureScreen from "../screens/AccountFeatureScreen";
 import UpdateAccountScreen from "../screens/UpdateAccountScreen";
-import LoginScreen from "../screens/LoginScreen";
 
 import { useAuth } from "../context/AuthContext";
 import theme from "../constants/theme";
@@ -25,6 +28,15 @@ export type RootStackParamList = {
     description: string;
     icon: string;
   };
+
+  Activation:
+    | {
+        username?: string;
+        email?: string;
+      }
+    | undefined;
+
+  Support: undefined;
 
   UpdateAccount: undefined;
 };
@@ -57,6 +69,8 @@ export default function RootStackNavigator() {
         <>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Activation" component={ActivationScreen} />
+          <Stack.Screen name="Support" component={SupportScreen} />
         </>
       ) : (
         <>
@@ -69,6 +83,14 @@ export default function RootStackNavigator() {
           <Stack.Screen
             name="AccountFeature"
             component={AccountFeatureScreen}
+          />
+
+          <Stack.Screen
+            name="Support"
+            component={SupportScreen}
+            options={{
+              title: "Help & Support",
+            }}
           />
 
           <Stack.Screen name="UpdateAccount" component={UpdateAccountScreen} />
