@@ -9,6 +9,7 @@ import type {
   LogoutResponse,
   HeartbeatResponse,
 } from "../types/auth";
+import type { WalletResponse } from "../types/wallet";
 
 const API_BASE_URL =
   "https://psalmoteedata.com.ng/wp-json/psalmoteedata-mobile/v1";
@@ -169,6 +170,16 @@ export const authApi = {
   logout(token: string): Promise<LogoutResponse> {
     return apiRequest<LogoutResponse>("/logout", {
       method: "POST",
+      token,
+    });
+  },
+};
+
+// Wallet
+export const walletApi = {
+  getBalance(token: string): Promise<WalletResponse> {
+    return apiRequest<WalletResponse>("/wallet", {
+      method: "GET",
       token,
     });
   },

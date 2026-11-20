@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -60,11 +61,20 @@ const services = [
 ] as const;
 
 export default function HomeScreen({ navigation }: Props) {
-  const { balance } = useWallet();
+  const {
+    balance,
+    isLoading: walletLoading,
+    error: walletError,
+    refreshBalance,
+  } = useWallet();
+
   const { transactions } = useTransactions();
+
   const recentTransactions = transactions.slice(0, 3);
+
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
+
   const formatBalance = (amount: number) => {
     return `₦${amount.toLocaleString("en-NG", {
       minimumFractionDigits: 2,
@@ -95,6 +105,21 @@ export default function HomeScreen({ navigation }: Props) {
     });
   };
 
+  /**
+   * Display the actual balance when available.
+   * Avoid showing ₦0.00 while the initial request is pending.
+   */
+  const displayedBalance =
+    walletError && balance === 0
+      ? "Unavailable"
+      : walletLoading && balance === 0
+        ? "Loading..."
+        : formatBalance(balance);
+
+  const handleRefresh = async () => {
+    await refreshBalance();
+  };
+
   const handleHelpPress = () => {
     Alert.alert(
       "Help Centre",
@@ -112,12 +137,20 @@ export default function HomeScreen({ navigation }: Props) {
   const handleCommunityPress = () => {
     Alert.alert("Community", "Our community link will be available here soon.");
   };
+
   return (
     <>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={walletLoading}
+            onRefresh={handleRefresh}
+            tintColor={theme.colors.primary}
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>
@@ -156,7 +189,7 @@ export default function HomeScreen({ navigation }: Props) {
         {/* Dashboard Cards Carousel */}
         <View style={styles.section}>
           <DashboardCardsCarousel
-            balance={formatBalance(balance)}
+            balance={displayedBalance}
             packageName="Customer"
             commissions={0}
             onFundWallet={() => navigation.navigate("FundWallet")}
@@ -167,6 +200,34 @@ export default function HomeScreen({ navigation }: Props) {
               )
             }
           />
+
+          {/* Wallet Error */}
+          {walletError && (
+            <View style={styles.walletErrorContainer}>
+              <View style={styles.walletErrorContent}>
+                <MaterialCommunityIcons
+                  name="alert-circle-outline"
+                  size={20}
+                  color={theme.colors.error}
+                />
+
+                <Text style={styles.walletErrorText}>
+                  Unable to update your wallet balance.
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => void refreshBalance()}
+                disabled={walletLoading}
+                activeOpacity={0.7}
+                style={styles.retryButton}
+              >
+                <Text style={styles.retryText}>
+                  {walletLoading ? "Retrying..." : "Retry"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Virtual Accounts */}
@@ -308,6 +369,41 @@ const styles = StyleSheet.create({
 
   section: {
     marginBottom: theme.spacing["3xl"],
+  },
+
+  walletErrorContainer: {
+    marginTop: theme.spacing.md,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+  },
+
+  walletErrorContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  },
+
+  walletErrorText: {
+    flex: 1,
+    color: theme.colors.muted,
+    fontSize: theme.typography.fontSize.sm,
+    fontFamily: theme.typography.fontFamily.body,
+  },
+
+  retryButton: {
+    alignSelf: "flex-end",
+    marginTop: theme.spacing.sm,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+
+  retryText: {
+    color: theme.colors.primary,
+    fontSize: theme.typography.fontSize.sm,
+    fontFamily: theme.typography.fontFamily.heading,
   },
 
   servicesGrid: {

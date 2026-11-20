@@ -31,15 +31,15 @@ export default function App() {
   }
 
   return (
-    <WalletProvider>
-      <TransactionProvider>
-        <AuthProvider>
+    <AuthProvider>
+      <WalletProvider>
+        <TransactionProvider>
           <NavigationContainer>
             <StatusBar style="light" />
             <RootStackNavigator />
           </NavigationContainer>
-        </AuthProvider>
-      </TransactionProvider>
-    </WalletProvider>
+        </TransactionProvider>
+      </WalletProvider>
+    </AuthProvider>
   );
 }
