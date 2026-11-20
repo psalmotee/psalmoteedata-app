@@ -193,12 +193,7 @@ export default function HomeScreen({ navigation }: Props) {
             packageName="Customer"
             commissions={0}
             onFundWallet={() => navigation.navigate("FundWallet")}
-            onViewHistory={() =>
-              Alert.alert(
-                "Wallet History",
-                "Wallet history screen coming soon.",
-              )
-            }
+            onViewHistory={() => navigation.navigate("WalletHistory")}
           />
 
           {/* Wallet Error */}

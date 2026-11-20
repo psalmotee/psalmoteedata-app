@@ -9,7 +9,7 @@ import type {
   LogoutResponse,
   HeartbeatResponse,
 } from "../types/auth";
-import type { WalletResponse } from "../types/wallet";
+import type { WalletHistoryResponse, WalletResponse } from "../types/wallet";
 
 const API_BASE_URL =
   "https://psalmoteedata.com.ng/wp-json/psalmoteedata-mobile/v1";
@@ -182,5 +182,19 @@ export const walletApi = {
       method: "GET",
       token,
     });
+  },
+
+  getHistory(
+    token: string,
+    page = 1,
+    perPage = 20,
+  ): Promise<WalletHistoryResponse> {
+    return apiRequest<WalletHistoryResponse>(
+      `/wallet/history?page=${page}&per_page=${perPage}`,
+      {
+        method: "GET",
+        token,
+      },
+    );
   },
 };
