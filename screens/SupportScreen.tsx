@@ -101,20 +101,20 @@ export default function SupportScreen({ navigation }: Props) {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={styles.backButton}
+        activeOpacity={0.7}
+      >
+        <MaterialCommunityIcons
+          name="arrow-left"
+          size={22}
+          color={theme.colors.text}
+        />
+      </TouchableOpacity>
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-          activeOpacity={0.7}
-        >
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={22}
-            color={theme.colors.text}
-          />
-        </TouchableOpacity>
-
         <View style={styles.headerIcon}>
           <MaterialCommunityIcons
             name="headset"
@@ -217,12 +217,7 @@ const styles = StyleSheet.create({
   content: {
     padding: theme.spacing.xl,
     paddingBottom: theme.spacing["4xl"],
-  },
-
-  header: {
-    alignItems: "center",
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing["2xl"],
+    paddingTop: theme.spacing["6xl"]
   },
 
   backButton: {
@@ -234,7 +229,14 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: theme.spacing.lg,
+    marginRight: theme.spacing.md,
+    // marginTop: theme.spacing["2xl"],
+  },
+
+  header: {
+    alignItems: "center",
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing["2xl"],
   },
 
   headerIcon: {

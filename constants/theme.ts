@@ -14,6 +14,8 @@ const theme = {
     "2xl": 24,
     "3xl": 32,
     "4xl": 40,
+    "5xl": 48,
+    "6xl": 56,
   },
 
   radius: {

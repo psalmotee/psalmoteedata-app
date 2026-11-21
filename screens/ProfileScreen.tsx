@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
 
   content: {
     padding: theme.spacing.lg,
-    paddingTop: theme.spacing["3xl"],
+    paddingTop: theme.spacing["4xl"],
     paddingBottom: theme.spacing["4xl"],
   },
 

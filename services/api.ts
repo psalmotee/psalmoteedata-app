@@ -10,6 +10,7 @@ import type {
   HeartbeatResponse,
 } from "../types/auth";
 import type { WalletHistoryResponse, WalletResponse } from "../types/wallet";
+import type { ServiceTransactionHistoryResponse } from "../types/serviceTransaction";
 
 const API_BASE_URL =
   "https://psalmoteedata.com.ng/wp-json/psalmoteedata-mobile/v1";
@@ -191,6 +192,23 @@ export const walletApi = {
   ): Promise<WalletHistoryResponse> {
     return apiRequest<WalletHistoryResponse>(
       `/wallet/history?page=${page}&per_page=${perPage}`,
+      {
+        method: "GET",
+        token,
+      },
+    );
+  },
+};
+
+// Transaction
+export const transactionApi = {
+  getHistory(
+    token: string,
+    page = 1,
+    perPage = 20,
+  ): Promise<ServiceTransactionHistoryResponse> {
+    return apiRequest<ServiceTransactionHistoryResponse>(
+      `/transactions?page=${page}&per_page=${perPage}`,
       {
         method: "GET",
         token,

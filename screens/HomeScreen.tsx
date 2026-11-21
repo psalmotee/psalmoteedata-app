@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
+
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import theme from "../constants/theme";
@@ -28,9 +30,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootTabParamList } from "../navigation/TabNavigator";
 import type { RootStackParamList } from "../navigation/RootStackNavigator";
 
-import TransactionDetailsModal from "../components/TransactionDetailsModal";
 import { useTransactions } from "../context/TransactionContext";
-import type { Transaction } from "../types/transaction";
+import type { ServiceTransaction } from "../types/serviceTransaction";
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<RootTabParamList, "Home">,
@@ -68,32 +69,44 @@ export default function HomeScreen({ navigation }: Props) {
     refreshBalance,
   } = useWallet();
 
-  const { transactions } = useTransactions();
+  const {
+    history,
+    isLoading: transactionsLoading,
+    isRefreshing: transactionsRefreshing,
+    error: transactionsError,
+    refreshHistory,
+  } = useTransactions();
 
-  const recentTransactions = transactions.slice(0, 3);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [selectedTransaction, setSelectedTransaction] =
-    useState<Transaction | null>(null);
+    useState<ServiceTransaction | null>(null);
 
-  const formatBalance = (amount: number) => {
-    return `₦${amount.toLocaleString("en-NG", {
+  const recentTransactions = history.slice(0, 3);
+
+  const formatBalance = (amount: number) =>
+    `₦${amount.toLocaleString("en-NG", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
-  };
 
-  const formatCurrency = (amount: number) => {
-    return `-₦${amount.toLocaleString("en-NG", {
+  const formatCurrency = (amount: number) =>
+    `₦${amount.toLocaleString("en-NG", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
-  };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Date unavailable";
+
+    const normalizedDate = dateString.includes("T")
+      ? dateString
+      : dateString.replace(" ", "T");
+
+    const date = new Date(normalizedDate);
 
     if (Number.isNaN(date.getTime())) {
-      return "Date unavailable";
+      return dateString;
     }
 
     return date.toLocaleString("en-NG", {
@@ -105,10 +118,45 @@ export default function HomeScreen({ navigation }: Props) {
     });
   };
 
-  /**
-   * Display the actual balance when available.
-   * Avoid showing ₦0.00 while the initial request is pending.
-   */
+  const formatService = (service: string) =>
+    service.charAt(0).toUpperCase() + service.slice(1).toLowerCase();
+
+  const getStatus = (status: string): "Successful" | "Pending" | "Failed" => {
+    const normalized = status.toLowerCase();
+
+    if (normalized.includes("success") || normalized.includes("complete")) {
+      return "Successful";
+    }
+
+    if (
+      normalized.includes("fail") ||
+      normalized.includes("reject") ||
+      normalized.includes("cancel")
+    ) {
+      return "Failed";
+    }
+
+    return "Pending";
+  };
+
+  const getTransactionIcon = (
+    service: string,
+  ): keyof typeof MaterialCommunityIcons.glyphMap => {
+    switch (service.toLowerCase()) {
+      case "airtime":
+        return "cellphone";
+      case "data":
+        return "sim";
+      case "electricity":
+        return "flash";
+      case "cable":
+      case "cable tv":
+        return "television";
+      default:
+        return "receipt";
+    }
+  };
+
   const displayedBalance =
     walletError && balance === 0
       ? "Unavailable"
@@ -117,7 +165,13 @@ export default function HomeScreen({ navigation }: Props) {
         : formatBalance(balance);
 
   const handleRefresh = async () => {
-    await refreshBalance();
+    setIsRefreshing(true);
+
+    try {
+      await Promise.all([refreshBalance(), refreshHistory()]);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleHelpPress = () => {
@@ -138,6 +192,77 @@ export default function HomeScreen({ navigation }: Props) {
     Alert.alert("Community", "Our community link will be available here soon.");
   };
 
+  const handleTransactionPress = (transaction: ServiceTransaction) => {
+    setSelectedTransaction(transaction);
+  };
+
+  const renderTransactionDetails = () => {
+    if (!selectedTransaction) return null;
+
+    const transaction = selectedTransaction;
+
+    const details = [
+      { label: "Service", value: formatService(transaction.service) },
+      { label: "Recipient", value: transaction.recipient },
+      { label: "Reference", value: transaction.reference },
+      { label: "Status", value: getStatus(transaction.status) },
+      { label: "Date", value: formatDate(transaction.date) },
+      {
+        label: "Balance before",
+        value:
+          transaction.balance_before !== null
+            ? formatCurrency(transaction.balance_before)
+            : "Not available",
+      },
+      {
+        label: "Balance after",
+        value:
+          transaction.balance_after !== null
+            ? formatCurrency(transaction.balance_after)
+            : "Not available",
+      },
+    ];
+
+    return (
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Transaction Details</Text>
+
+            <TouchableOpacity onPress={() => setSelectedTransaction(null)}>
+              <MaterialCommunityIcons
+                name="close"
+                size={24}
+                color={theme.colors.text}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalAmount}>
+            {formatCurrency(transaction.amount)}
+          </Text>
+
+          {details.map((detail) => (
+            <View key={detail.label} style={styles.modalDetailRow}>
+              <Text style={styles.modalDetailLabel}>{detail.label}</Text>
+
+              <Text style={styles.modalDetailValue}>
+                {detail.value || "Not available"}
+              </Text>
+            </View>
+          ))}
+
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={() => setSelectedTransaction(null)}
+          >
+            <Text style={styles.modalCloseText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <>
       <ScrollView
@@ -146,7 +271,9 @@ export default function HomeScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={walletLoading}
+            refreshing={
+              isRefreshing || (transactionsRefreshing && !isRefreshing)
+            }
             onRefresh={handleRefresh}
             tintColor={theme.colors.primary}
           />
@@ -186,7 +313,7 @@ export default function HomeScreen({ navigation }: Props) {
           }
         />
 
-        {/* Dashboard Cards Carousel */}
+        {/* Dashboard Cards */}
         <View style={styles.section}>
           <DashboardCardsCarousel
             balance={displayedBalance}
@@ -196,7 +323,6 @@ export default function HomeScreen({ navigation }: Props) {
             onViewHistory={() => navigation.navigate("WalletHistory")}
           />
 
-          {/* Wallet Error */}
           {walletError && (
             <View style={styles.walletErrorContainer}>
               <View style={styles.walletErrorContent}>
@@ -273,16 +399,44 @@ export default function HomeScreen({ navigation }: Props) {
             onActionPress={() => navigation.navigate("Transactions")}
           />
 
-          {recentTransactions.length > 0 ? (
+          {transactionsLoading && history.length === 0 ? (
+            <View style={styles.transactionState}>
+              <ActivityIndicator color={theme.colors.primary} size="small" />
+              <Text style={styles.emptyText}>
+                Loading recent transactions...
+              </Text>
+            </View>
+          ) : transactionsError && history.length === 0 ? (
+            <View style={styles.transactionState}>
+              <MaterialCommunityIcons
+                name="alert-circle-outline"
+                size={28}
+                color={theme.colors.error}
+              />
+
+              <Text style={styles.emptyText}>
+                Unable to load recent transactions.
+              </Text>
+
+              <TouchableOpacity
+                onPress={() => void refreshHistory()}
+                style={styles.retryButton}
+              >
+                <Text style={styles.retryText}>Try Again</Text>
+              </TouchableOpacity>
+            </View>
+          ) : recentTransactions.length > 0 ? (
             recentTransactions.map((transaction) => (
               <TransactionItem
                 key={transaction.id}
-                name={`${transaction.network} ${transaction.serviceType}`}
-                date={`${formatDate(transaction.completedAt)} • ${transaction.phoneNumber}`}
-                amount={formatCurrency(transaction.totalAmount)}
-                status={transaction.status}
-                icon={transaction.serviceType === "Data" ? "wifi" : "cellphone"}
-                onPress={() => setSelectedTransaction(transaction)}
+                name={formatService(transaction.service)}
+                date={`${transaction.recipient} • ${formatDate(
+                  transaction.date,
+                )}`}
+                amount={formatCurrency(transaction.amount)}
+                status={getStatus(transaction.status)}
+                icon={getTransactionIcon(transaction.service)}
+                onPress={() => handleTransactionPress(transaction)}
               />
             ))
           ) : (
@@ -300,11 +454,7 @@ export default function HomeScreen({ navigation }: Props) {
         />
       </ScrollView>
 
-      {/* Transaction Details Modal */}
-      <TransactionDetailsModal
-        transaction={selectedTransaction}
-        onClose={() => setSelectedTransaction(null)}
-      />
+      {renderTransactionDetails()}
     </>
   );
 }
@@ -413,5 +563,86 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.fontFamily.body,
     textAlign: "center",
     paddingVertical: theme.spacing.xl,
+  },
+
+  transactionState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: theme.spacing.xl,
+  },
+
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+
+  modalContainer: {
+    backgroundColor: theme.colors.background,
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+    padding: theme.spacing.lg,
+  },
+
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.xl,
+  },
+
+  modalTitle: {
+    color: theme.colors.text,
+    fontSize: theme.typography.fontSize.xl,
+    fontFamily: theme.typography.fontFamily.heading,
+  },
+
+  modalAmount: {
+    color: theme.colors.text,
+    fontSize: theme.typography.fontSize["2xl"],
+    fontFamily: theme.typography.fontFamily.bold,
+    textAlign: "center",
+    marginBottom: theme.spacing.xl,
+  },
+
+  modalDetailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
+    gap: theme.spacing.md,
+  },
+
+  modalDetailLabel: {
+    color: theme.colors.muted,
+    fontSize: theme.typography.fontSize.sm,
+    fontFamily: theme.typography.fontFamily.body,
+    flex: 1,
+  },
+
+  modalDetailValue: {
+    color: theme.colors.text,
+    fontSize: theme.typography.fontSize.sm,
+    fontFamily: theme.typography.fontFamily.medium,
+    flex: 1,
+    textAlign: "right",
+  },
+
+  modalCloseButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    alignItems: "center",
+    marginTop: theme.spacing.xl,
+  },
+
+  modalCloseText: {
+    color: theme.colors.white,
+    fontFamily: theme.typography.fontFamily.semibold,
   },
 });

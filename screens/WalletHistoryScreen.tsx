@@ -241,7 +241,7 @@ export default function WalletHistoryScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} >
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -344,6 +344,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: theme.spacing.xl,
     marginBottom: theme.spacing.xl,
+    paddingTop: 20,
   },
 
   backButton: {
@@ -356,6 +357,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: theme.spacing.md,
+    marginTop: theme.spacing["2xl"],
   },
 
   title: {

@@ -5,51 +5,62 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
+  Modal,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import TransactionItem from "../components/TransactionItem";
 import { useTransactions } from "../context/TransactionContext";
-import { TransactionServiceType } from "../types/transaction";
+import type { ServiceTransaction } from "../types/serviceTransaction";
 import theme from "../constants/theme";
-import { Transaction } from "../types/transaction";
-import TransactionDetailsModal from "../components/TransactionDetailsModal";
 
-type FilterType = "All" | TransactionServiceType;
+type FilterType = "All" | "Airtime" | "Data";
 
 const filters: FilterType[] = ["All", "Airtime", "Data"];
 
 export default function TransactionsScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
-  const { transactions } = useTransactions();
 
   const [selectedTransaction, setSelectedTransaction] =
-    useState<Transaction | null>(null);
+    useState<ServiceTransaction | null>(null);
 
-  const filteredTransactions = transactions
-    .filter((transaction) => {
-      if (activeFilter === "All") return true;
+  const {
+    history,
+    pagination,
+    isLoading,
+    isRefreshing,
+    isLoadingMore,
+    error,
+    refreshHistory,
+    loadMoreHistory,
+  } = useTransactions();
 
-      return transaction.serviceType === activeFilter;
-    })
-    .sort(
-      (a, b) =>
-        new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(),
-    );
+  const filteredTransactions = history.filter((transaction) => {
+    if (activeFilter === "All") return true;
 
-  const formatCurrency = (amount: number) => {
-    return `₦${amount.toLocaleString("en-NG", {
+    return transaction.service.toLowerCase() === activeFilter.toLowerCase();
+  });
+
+  const formatCurrency = (amount: number) =>
+    `₦${amount.toLocaleString("en-NG", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
-  };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Date unavailable";
+
+    const normalizedDate = dateString.includes("T")
+      ? dateString
+      : dateString.replace(" ", "T");
+
+    const date = new Date(normalizedDate);
 
     if (Number.isNaN(date.getTime())) {
-      return "Date unavailable";
+      return dateString;
     }
 
     return date.toLocaleString("en-NG", {
@@ -61,17 +72,167 @@ export default function TransactionsScreen() {
     });
   };
 
-  const getTransactionIcon = (
-    serviceType: TransactionServiceType,
-  ): keyof typeof MaterialCommunityIcons.glyphMap => {
-    return serviceType === "Airtime" ? "cellphone" : "sim";
+  const formatService = (service: string) =>
+    service.charAt(0).toUpperCase() + service.slice(1).toLowerCase();
+
+  const getStatus = (status: string): "Successful" | "Pending" | "Failed" => {
+    const normalized = status.toLowerCase();
+
+    if (normalized.includes("success") || normalized.includes("complete")) {
+      return "Successful";
+    }
+
+    if (
+      normalized.includes("fail") ||
+      normalized.includes("reject") ||
+      normalized.includes("cancel")
+    ) {
+      return "Failed";
+    }
+
+    return "Pending";
   };
+
+  const getTransactionIcon = (
+    service: string,
+  ): keyof typeof MaterialCommunityIcons.glyphMap => {
+    switch (service.toLowerCase()) {
+      case "airtime":
+        return "cellphone";
+      case "data":
+        return "sim";
+      case "electricity":
+        return "flash";
+      case "cable":
+        return "television";
+      default:
+        return "receipt";
+    }
+  };
+
+  const renderDetail = (label: string, value: string) => (
+    <View style={styles.detailRow} key={label}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value || "Not available"}</Text>
+    </View>
+  );
+
+  const renderTransactionDetails = () => {
+    if (!selectedTransaction) return null;
+
+    const transaction = selectedTransaction;
+
+    return (
+      <Modal
+        visible={Boolean(selectedTransaction)}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedTransaction(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Transaction Details</Text>
+
+              <Pressable
+                onPress={() => setSelectedTransaction(null)}
+                hitSlop={10}
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={24}
+                  color={theme.colors.text}
+                />
+              </Pressable>
+            </View>
+
+            <View style={styles.modalAmountContainer}>
+              <Text style={styles.modalAmountLabel}>Amount</Text>
+              <Text style={styles.modalAmount}>
+                {formatCurrency(Number(transaction.amount))}
+              </Text>
+
+              <Text
+                style={[
+                  styles.statusBadge,
+                  getStatus(transaction.status) === "Successful"
+                    ? styles.successBadge
+                    : getStatus(transaction.status) === "Failed"
+                      ? styles.failedBadge
+                      : styles.pendingBadge,
+                ]}
+              >
+                {formatStatus(transaction.status)}
+              </Text>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {renderDetail("Service", formatService(transaction.service))}
+              {renderDetail("Recipient", transaction.recipient)}
+              {renderDetail("Reference", transaction.reference)}
+              {renderDetail("Payment channel", transaction.via)}
+              {renderDetail("Country", transaction.country)}
+              {renderDetail("Date", formatDate(transaction.date))}
+              {renderDetail(
+                "Description",
+                transaction.description ?? "Not provided",
+              )}
+              {renderDetail(
+                "Balance before",
+                transaction.balance_before !== null
+                  ? formatCurrency(transaction.balance_before)
+                  : "Not available",
+              )}
+              {renderDetail(
+                "Balance after",
+                transaction.balance_after !== null
+                  ? formatCurrency(transaction.balance_after)
+                  : "Not available",
+              )}
+            </ScrollView>
+
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => setSelectedTransaction(null)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  function formatStatus(status: string) {
+    const normalized = status.toLowerCase();
+
+    if (normalized.includes("success") || normalized.includes("complete")) {
+      return "Successful";
+    }
+
+    if (
+      normalized.includes("fail") ||
+      normalized.includes("reject") ||
+      normalized.includes("cancel")
+    ) {
+      return "Failed";
+    }
+
+    return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  }
 
   return (
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={refreshHistory}
+            tintColor={theme.colors.primary}
+          />
+        }
       >
         <View style={styles.header}>
           <Text style={styles.title}>Transactions</Text>
@@ -112,20 +273,61 @@ export default function TransactionsScreen() {
           </Text>
         </View>
 
-        {filteredTransactions.length > 0 ? (
-          filteredTransactions.map((transaction) => (
-            <TransactionItem
-              key={transaction.id}
-              name={`${transaction.network} ${transaction.serviceType}`}
-              date={`${transaction.phoneNumber} • ${formatDate(
-                transaction.completedAt,
-              )}`}
-              amount={formatCurrency(transaction.totalAmount)}
-              status={transaction.status}
-              icon={getTransactionIcon(transaction.serviceType)}
-              onPress={() => setSelectedTransaction(transaction)}
+        {isLoading && history.length === 0 ? (
+          <View style={styles.stateContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={styles.stateText}>Loading transactions...</Text>
+          </View>
+        ) : error && history.length === 0 ? (
+          <View style={styles.stateContainer}>
+            <MaterialCommunityIcons
+              name="alert-circle-outline"
+              size={42}
+              color={theme.colors.error}
             />
-          ))
+
+            <Text style={styles.emptyTitle}>Unable to load transactions</Text>
+
+            <Text style={styles.emptyDescription}>{error}</Text>
+
+            <Pressable style={styles.retryButton} onPress={refreshHistory}>
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </Pressable>
+          </View>
+        ) : filteredTransactions.length > 0 ? (
+          <>
+            {filteredTransactions.map((transaction) => (
+              <TransactionItem
+                key={transaction.id}
+                name={formatService(transaction.service)}
+                date={`${transaction.recipient} • ${formatDate(
+                  transaction.date,
+                )}`}
+                amount={formatCurrency(transaction.amount)}
+                status={getStatus(transaction.status)}
+                icon={getTransactionIcon(transaction.service)}
+                onPress={() => setSelectedTransaction(transaction)}
+              />
+            ))}
+
+            {pagination && pagination.current_page < pagination.total_pages && (
+              <Pressable
+                style={styles.loadMoreButton}
+                onPress={loadMoreHistory}
+                disabled={isLoadingMore}
+              >
+                {isLoadingMore ? (
+                  <ActivityIndicator color={theme.colors.primary} />
+                ) : (
+                  <Text style={styles.loadMoreText}>
+                    Load More Transactions
+                  </Text>
+                )}
+              </Pressable>
+            )}
+
+            {error && <Text style={styles.paginationError}>{error}</Text>}
+          </>
         ) : (
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons
@@ -137,16 +339,15 @@ export default function TransactionsScreen() {
             <Text style={styles.emptyTitle}>No transactions found</Text>
 
             <Text style={styles.emptyDescription}>
-              Your {activeFilter.toLowerCase()} transactions will appear here.
+              {activeFilter === "All"
+                ? "Your transactions will appear here."
+                : `Your ${activeFilter.toLowerCase()} transactions will appear here.`}
             </Text>
           </View>
         )}
       </ScrollView>
 
-      <TransactionDetailsModal
-        transaction={selectedTransaction}
-        onClose={() => setSelectedTransaction(null)}
-      />
+      {renderTransactionDetails()}
     </View>
   );
 }
@@ -160,6 +361,8 @@ const styles = StyleSheet.create({
   content: {
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing["4xl"],
+    paddingTop: 55,
+    flexGrow: 1,
   },
 
   header: {
@@ -228,6 +431,18 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.xs,
   },
 
+  stateContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: theme.spacing["4xl"],
+  },
+
+  stateText: {
+    color: theme.colors.muted,
+    marginTop: theme.spacing.md,
+    fontFamily: theme.typography.fontFamily.body,
+  },
+
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
@@ -247,5 +462,146 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
     textAlign: "center",
     marginTop: theme.spacing.xs,
+  },
+
+  retryButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    marginTop: theme.spacing.lg,
+  },
+
+  retryButtonText: {
+    color: theme.colors.white,
+    fontFamily: theme.typography.fontFamily.semibold,
+  },
+
+  loadMoreButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing.lg,
+    marginTop: theme.spacing.md,
+  },
+
+  loadMoreText: {
+    color: theme.colors.primary,
+    fontFamily: theme.typography.fontFamily.semibold,
+  },
+
+  paginationError: {
+    color: theme.colors.error,
+    textAlign: "center",
+    marginVertical: theme.spacing.md,
+    fontSize: theme.typography.fontSize.xs,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+
+  modalContainer: {
+    backgroundColor: theme.colors.background,
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+    padding: theme.spacing.lg,
+    maxHeight: "85%",
+  },
+
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: theme.spacing.xl,
+  },
+
+  modalTitle: {
+    color: theme.colors.text,
+    fontFamily: theme.typography.fontFamily.heading,
+    fontSize: theme.typography.fontSize.xl,
+  },
+
+  modalAmountContainer: {
+    alignItems: "center",
+    paddingVertical: theme.spacing.xl,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.radius.lg,
+    marginBottom: theme.spacing.lg,
+  },
+
+  modalAmountLabel: {
+    color: theme.colors.muted,
+    fontFamily: theme.typography.fontFamily.body,
+    fontSize: theme.typography.fontSize.sm,
+  },
+
+  modalAmount: {
+    color: theme.colors.text,
+    fontFamily: theme.typography.fontFamily.bold,
+    fontSize: theme.typography.fontSize["2xl"],
+    marginVertical: theme.spacing.sm,
+  },
+
+  statusBadge: {
+    overflow: "hidden",
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radius.full,
+    fontSize: theme.typography.fontSize.xs,
+    fontFamily: theme.typography.fontFamily.semibold,
+  },
+
+  successBadge: {
+    backgroundColor: "rgba(34,197,94,0.15)",
+    color: theme.colors.success,
+  },
+
+  failedBadge: {
+    backgroundColor: "rgba(239,68,68,0.15)",
+    color: theme.colors.error,
+  },
+
+  pendingBadge: {
+    backgroundColor: "rgba(245,158,11,0.15)",
+    color: theme.colors.accent,
+  },
+
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border ?? theme.colors.muted,
+    gap: theme.spacing.md,
+  },
+
+  detailLabel: {
+    color: theme.colors.muted,
+    fontFamily: theme.typography.fontFamily.body,
+    fontSize: theme.typography.fontSize.sm,
+    flex: 1,
+  },
+
+  detailValue: {
+    color: theme.colors.text,
+    fontFamily: theme.typography.fontFamily.medium,
+    fontSize: theme.typography.fontSize.sm,
+    flex: 1,
+    textAlign: "right",
+  },
+
+  closeButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    alignItems: "center",
+    marginTop: theme.spacing.lg,
+  },
+
+  closeButtonText: {
+    color: theme.colors.white,
+    fontFamily: theme.typography.fontFamily.semibold,
   },
 });
