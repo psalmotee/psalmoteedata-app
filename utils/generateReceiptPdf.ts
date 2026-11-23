@@ -2,7 +2,9 @@ import { Asset } from "expo-asset";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 
-type ReceiptData = {
+import type { ServiceTransaction } from "../types/serviceTransaction";
+
+type LegacyReceiptData = {
   serviceType: "Airtime" | "Data";
   network: string;
   phoneNumber: string;
@@ -13,33 +15,153 @@ type ReceiptData = {
   completedAt: string;
 };
 
+type ReceiptData = LegacyReceiptData | ServiceTransaction;
+
+type NormalizedReceipt = {
+  service: string;
+  recipient: string;
+  plan?: string;
+  provider?: string;
+  type?: string;
+  reference: string;
+  date: string | null;
+  status: string;
+  via?: string;
+  amount: number;
+};
+
 const formatCurrency = (amount: number) =>
   `₦${amount.toLocaleString("en-NG", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 
-  // Format the date string into a more readable format.
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 
-    if (Number.isNaN(date.getTime())) {
-      return "Date unavailable";
-    }
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return "Date unavailable";
 
-    return date.toLocaleString("en-NG", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const normalizedDate = dateString.includes("T")
+    ? dateString
+    : dateString.replace(" ", "T");
+
+  const date = new Date(normalizedDate);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateString;
+  }
+
+  return date.toLocaleString("en-NG", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const normalizeReceiptData = (data: ReceiptData): NormalizedReceipt => {
+  if ("service" in data) {
+    return {
+      service: data.service,
+      recipient: data.recipient,
+      plan: data.plan,
+      provider: data.provider,
+      type: data.type,
+      reference: data.reference,
+      date: data.date,
+      status: data.status,
+      via: data.via,
+      amount: Number(data.amount),
+    };
+  }
+
+  // Preserve support for the existing local purchase receipt flow.
+  return {
+    service: data.serviceType,
+    recipient: data.phoneNumber,
+    provider: data.network,
+    reference: data.transactionReference,
+    date: data.completedAt,
+    status: "successful",
+    amount: Number(data.totalAmount),
   };
+};
+
+const getStatusLabel = (status: string) => {
+  const normalized = status.toLowerCase();
+
+  if (normalized.includes("success") || normalized.includes("complete")) {
+    return "Successful";
+  }
+
+  if (
+    normalized.includes("fail") ||
+    normalized.includes("reject") ||
+    normalized.includes("cancel")
+  ) {
+    return "Failed";
+  }
+
+  if (normalized.includes("pending") || normalized.includes("process")) {
+    return "Pending";
+  }
+
+  return status
+    ? status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
+    : "Unknown";
+};
+
+const getStatusColor = (status: string) => {
+  switch (getStatusLabel(status)) {
+    case "Successful":
+      return "#16a34a";
+
+    case "Failed":
+      return "#dc2626";
+
+    case "Pending":
+      return "#d97706";
+
+    default:
+      return "#6b7280";
+  }
+};
+
+const sanitizeFileName = (value: string) =>
+  value.replace(/[^a-zA-Z0-9_-]/g, "-");
+
+const formatPlan = (service: string, plan?: string) => {
+  if (!plan) return null;
+
+  if (service.toLowerCase() === "airtime" && !Number.isNaN(Number(plan))) {
+    return `${formatCurrency(Number(plan))} Airtime`;
+  }
+
+  return plan;
+};
+
+const formatDisplayValue = (value?: string) => {
+  if (!value) return "Not available";
+
+  return value.toUpperCase();
+};
 
 export async function generateReceiptPdf(data: ReceiptData) {
-  // Load the PsalmoteeData logo.
+  const receipt = normalizeReceiptData(data);
+
+  if (!Number.isFinite(receipt.amount)) {
+    throw new Error("Invalid transaction amount.");
+  }
+
   const logoAsset = Asset.fromModule(
-    require("../assets/images/psalmoteedata-logo.png")
+    require("../assets/images/psalmoteedata-logo.png"),
   );
 
   await logoAsset.downloadAsync();
@@ -48,13 +170,52 @@ export async function generateReceiptPdf(data: ReceiptData) {
     throw new Error("Unable to load PsalmoteeData logo.");
   }
 
-  // Convert the logo into Base64 for embedding in the PDF.
-  const logoBase64 = await FileSystem.readAsStringAsync(
-    logoAsset.localUri,
-    {
-      encoding: FileSystem.EncodingType.Base64,
-    }
+  const logoBase64 = await FileSystem.readAsStringAsync(logoAsset.localUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  const statusLabel = getStatusLabel(receipt.status);
+  const statusColor = getStatusColor(receipt.status);
+
+  // Only include relevant receipt information.
+  const detailRows: [string, string][] = [
+    ["Service", receipt.service.toUpperCase()],
+    ["Recipient", receipt.recipient || "Not available"],
+  ];
+
+  const plan = formatPlan(receipt.service, receipt.plan);
+
+  if (plan) {
+    detailRows.push(["Plan", plan]);
+  }
+
+  if (receipt.provider) {
+    detailRows.push(["Provider", formatDisplayValue(receipt.provider)]);
+  }
+
+  if (receipt.type) {
+    detailRows.push(["Type", formatDisplayValue(receipt.type)]);
+  }
+
+  detailRows.push(
+    ["Transaction Reference", receipt.reference || "Not available"],
+    ["Date & Time", formatDate(receipt.date)],
   );
+
+  if (receipt.via) {
+    detailRows.push(["Via", receipt.via]);
+  }
+
+  const detailsHtml = detailRows
+    .map(
+      ([label, value]) => `
+        <div class="row">
+          <span class="label">${escapeHtml(label)}</span>
+          <span class="value">${escapeHtml(value)}</span>
+        </div>
+      `,
+    )
+    .join("");
 
   const html = `
     <!DOCTYPE html>
@@ -117,7 +278,6 @@ export async function generateReceiptPdf(data: ReceiptData) {
           }
 
           .status-title {
-            color: #16a34a;
             font-size: 20px;
             font-weight: bold;
           }
@@ -198,13 +358,18 @@ export async function generateReceiptPdf(data: ReceiptData) {
           </div>
 
           <div class="status">
-            <div class="status-title">✓ Transaction Successful</div>
-
-            <div class="amount">
-              ${formatCurrency(data.totalAmount)}
+            <div
+              class="status-title"
+              style="color: ${statusColor};"
+            >
+              ${escapeHtml(statusLabel)}
             </div>
 
-            <p class="label">Amount Paid</p>
+            <div class="amount">
+              ${formatCurrency(receipt.amount)}
+            </div>
+
+            <p class="label">Transaction Amount</p>
           </div>
 
           <div class="divider"></div>
@@ -212,54 +377,28 @@ export async function generateReceiptPdf(data: ReceiptData) {
           <div class="section">
             <div class="section-title">Transaction Details</div>
 
-            <div class="row">
-              <span class="label">Transaction Type</span>
-              <span class="value">${data.serviceType}</span>
-            </div>
-
-            <div class="row">
-              <span class="label">Network</span>
-              <span class="value">${data.network}</span>
-            </div>
-
-            <div class="row">
-              <span class="label">Recipient</span>
-              <span class="value">${data.phoneNumber}</span>
-            </div>
-
-            <div class="row">
-              <span class="label">Description</span>
-              <span class="value">${data.description}</span>
-            </div>
-
-            <div class="row">
-              <span class="label">Transaction Reference</span>
-              <span class="value">${data.transactionReference}</span>
-            </div>
-
-            <div class="row">
-              <span class="label">Date & Time</span>
-              <span class="value">${formatDate(data.completedAt)}</span>
-            </div>
+            ${detailsHtml}
           </div>
 
           <div class="divider"></div>
 
           <div class="section">
-            <div class="row">
-              <span class="label">Amount</span>
-              <span class="value">${formatCurrency(data.amount)}</span>
-            </div>
-
             <div class="row total">
-              <span>Total Amount Paid</span>
-              <span>${formatCurrency(data.totalAmount)}</span>
+              <span>Amount Paid</span>
+              <span>${formatCurrency(receipt.amount)}</span>
             </div>
           </div>
 
           <div class="footer">
             Thank you for using PsalmoteeData.<br />
-            For support, contact us at <a href="mailto:psalmoteetelecoms@gmail.com">psalmoteetelecoms@gmail.com</a> or <a href="https://wa.me/+2348058461612">WhatsApp Chat</a>.
+            For support, contact us at
+            <a href="mailto:psalmoteetelecoms@gmail.com">
+              psalmoteetelecoms@gmail.com
+            </a>
+            or
+            <a href="https://wa.me/2348058461612">
+              WhatsApp Chat
+            </a>.
           </div>
 
         </div>
@@ -267,7 +406,6 @@ export async function generateReceiptPdf(data: ReceiptData) {
     </html>
   `;
 
-  // Generate the PDF.
   const pdf = await Print.printToFileAsync({
     html,
     base64: true,
@@ -277,7 +415,9 @@ export async function generateReceiptPdf(data: ReceiptData) {
     throw new Error("Unable to generate PDF data.");
   }
 
-  const fileName = `${data.serviceType}-${data.phoneNumber}-${data.transactionReference}.pdf`;
+  const fileName = `${sanitizeFileName(receipt.service)}-${sanitizeFileName(
+    receipt.recipient,
+  )}-${sanitizeFileName(receipt.reference)}.pdf`;
 
   return {
     base64: pdf.base64,

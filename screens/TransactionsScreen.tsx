@@ -8,6 +8,7 @@ import {
   Modal,
   ActivityIndicator,
   RefreshControl,
+  Alert
 } from "react-native";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -16,6 +17,10 @@ import TransactionItem from "../components/TransactionItem";
 import { useTransactions } from "../context/TransactionContext";
 import type { ServiceTransaction } from "../types/serviceTransaction";
 import theme from "../constants/theme";
+
+// Generate & share recipt
+import { generateReceiptPdf } from "../utils/generateReceiptPdf";
+import { downloadReceipt, shareReceipt } from "../utils/receiptActions";
 
 type FilterType = "All" | "Airtime" | "Data";
 
@@ -26,6 +31,9 @@ export default function TransactionsScreen() {
 
   const [selectedTransaction, setSelectedTransaction] =
     useState<ServiceTransaction | null>(null);
+
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [isSharing, setIsSharing] = useState(false);
 
   const {
     history,
@@ -169,31 +177,71 @@ export default function TransactionsScreen() {
             <ScrollView showsVerticalScrollIndicator={false}>
               {renderDetail("Service", formatService(transaction.service))}
               {renderDetail("Recipient", transaction.recipient)}
+
+              {transaction.plan &&
+                renderDetail(
+                  "Plan",
+                  transaction.service.toLowerCase() === "airtime" &&
+                    !Number.isNaN(Number(transaction.plan))
+                    ? `${formatCurrency(Number(transaction.plan))} Airtime`
+                    : transaction.plan,
+                )}
+
+              {transaction.provider &&
+                renderDetail("Provider", transaction.provider.toUpperCase())}
+
+              {transaction.type &&
+                renderDetail("Type", transaction.type.toUpperCase())}
+
               {renderDetail("Reference", transaction.reference)}
-              {renderDetail("Payment channel", transaction.via)}
-              {renderDetail("Country", transaction.country)}
+              {renderDetail("Via", transaction.via)}
               {renderDetail("Date", formatDate(transaction.date))}
-              {renderDetail(
-                "Description",
-                transaction.description ?? "Not provided",
-              )}
-              {renderDetail(
-                "Balance before",
-                transaction.balance_before !== null
-                  ? formatCurrency(transaction.balance_before)
-                  : "Not available",
-              )}
-              {renderDetail(
-                "Balance after",
-                transaction.balance_after !== null
-                  ? formatCurrency(transaction.balance_after)
-                  : "Not available",
-              )}
             </ScrollView>
+
+            <Pressable
+              style={styles.receiptButton}
+              onPress={handleDownloadReceipt}
+              disabled={isGenerating || isSharing}
+            >
+              {isGenerating ? (
+                <ActivityIndicator color={theme.colors.white} />
+              ) : (
+                <>
+                  <MaterialCommunityIcons
+                    name="download"
+                    size={20}
+                    color={theme.colors.white}
+                  />
+                  <Text style={styles.receiptButtonText}>
+                    Download Receipt (PDF)
+                  </Text>
+                </>
+              )}
+            </Pressable>
+
+            <Pressable
+              style={styles.shareButton}
+              onPress={handleShareReceipt}
+              disabled={isGenerating || isSharing}
+            >
+              {isSharing ? (
+                <ActivityIndicator color={theme.colors.primary} />
+              ) : (
+                <>
+                  <MaterialCommunityIcons
+                    name="share-variant"
+                    size={20}
+                    color={theme.colors.primary}
+                  />
+                  <Text style={styles.shareButtonText}>Share Receipt</Text>
+                </>
+              )}
+            </Pressable>
 
             <Pressable
               style={styles.closeButton}
               onPress={() => setSelectedTransaction(null)}
+              disabled={isGenerating || isSharing}
             >
               <Text style={styles.closeButtonText}>Close</Text>
             </Pressable>
@@ -220,6 +268,63 @@ export default function TransactionsScreen() {
 
     return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
   }
+
+  const handleDownloadReceipt = async () => {
+    if (!selectedTransaction) return;
+
+    try {
+      setIsGenerating(true);
+
+      const receipt = await generateReceiptPdf(selectedTransaction);
+      const saved = await downloadReceipt(receipt);
+
+      if (saved) {
+        Alert.alert(
+          "Receipt Saved",
+          `${receipt.fileName} was saved successfully.`,
+        );
+      } else {
+        Alert.alert(
+          "Permission Required",
+          "Please grant folder access to save your receipt.",
+        );
+      }
+    } catch (error) {
+      console.error("Receipt download error:", error);
+
+      Alert.alert(
+        "Download Failed",
+        error instanceof Error
+          ? error.message
+          : "Unable to save your receipt. Please try again.",
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleShareReceipt = async () => {
+    if (!selectedTransaction) return;
+
+    try {
+      setIsSharing(true);
+
+      const receipt = await generateReceiptPdf(selectedTransaction);
+
+      await shareReceipt(receipt);
+    } catch (error) {
+      console.error("Receipt sharing error:", error);
+
+      Alert.alert(
+        "Sharing Failed",
+        error instanceof Error
+          ? error.message
+          : "Unable to share your receipt. Please try again.",
+      );
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -602,6 +707,40 @@ const styles = StyleSheet.create({
 
   closeButtonText: {
     color: theme.colors.white,
+    fontFamily: theme.typography.fontFamily.semibold,
+  },
+
+  receiptButton: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    marginTop: theme.spacing.lg,
+  },
+
+  receiptButtonText: {
+    color: theme.colors.white,
+    fontFamily: theme.typography.fontFamily.semibold,
+  },
+
+  shareButton: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.card,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    marginTop: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+
+  shareButtonText: {
+    color: theme.colors.primary,
     fontFamily: theme.typography.fontFamily.semibold,
   },
 });

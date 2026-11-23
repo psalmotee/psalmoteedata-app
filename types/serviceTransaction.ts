@@ -6,6 +6,11 @@ export type ServiceTransaction = {
   status: string;
   via: string;
   reference: string;
+
+  plan: string;
+  provider: string;
+  type: string;
+
   balance_before: number | null;
   balance_after: number | null;
   description: string | null;
