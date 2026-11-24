@@ -352,7 +352,9 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         {/* Virtual Accounts */}
-        <VirtualAccountsSection />
+        <VirtualAccountsSection
+          onPressViewAll={() => navigation.navigate("FundWallet")}
+        />
 
         {/* Quick Services */}
         <View style={styles.section}>

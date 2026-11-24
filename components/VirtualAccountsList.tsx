@@ -7,7 +7,7 @@ import colors from "../constants/colors";
 import typography from "../constants/typography";
 import AppCard from "./AppCard";
 
-import type { VirtualAccount } from "../data/virtualAccounts";
+import type { VirtualAccount } from "../types/virtualAccount";
 
 type Props = {
   accounts: VirtualAccount[];
@@ -17,6 +17,7 @@ export default function VirtualAccountsList({ accounts }: Props) {
   const handleCopyAccount = async (accountNumber: string) => {
     try {
       await Clipboard.setStringAsync(accountNumber);
+
       Alert.alert("Copied", "Account number copied successfully.");
     } catch {
       Alert.alert(
@@ -59,13 +60,15 @@ export default function VirtualAccountsList({ accounts }: Props) {
               </View>
 
               <View style={styles.bankInfo}>
-                <Text style={styles.bankName}>{account.bankName}</Text>
+                <Text style={styles.bankName}>{account.bank_name}</Text>
+
                 <Text style={styles.accountType}>Virtual Account</Text>
               </View>
             </View>
 
             <View style={styles.statusBadge}>
               <View style={styles.statusDot} />
+
               <Text style={styles.statusText}>Available</Text>
             </View>
           </View>
@@ -73,18 +76,19 @@ export default function VirtualAccountsList({ accounts }: Props) {
           <View style={styles.divider} />
 
           <Text style={styles.label}>ACCOUNT NAME</Text>
-          <Text style={styles.detailValue}>{account.accountName}</Text>
+
+          <Text style={styles.detailValue}>{account.account_name}</Text>
 
           <View style={styles.divider} />
 
           <Text style={styles.label}>ACCOUNT NUMBER</Text>
 
           <View style={styles.accountNumberRow}>
-            <Text style={styles.accountNumber}>{account.accountNumber}</Text>
+            <Text style={styles.accountNumber}>{account.account_number}</Text>
 
             <TouchableOpacity
               style={styles.copyButton}
-              onPress={() => handleCopyAccount(account.accountNumber)}
+              onPress={() => handleCopyAccount(account.account_number)}
               activeOpacity={0.8}
             >
               <MaterialCommunityIcons
@@ -102,12 +106,16 @@ export default function VirtualAccountsList({ accounts }: Props) {
           <View style={styles.additionalDetails}>
             <View style={styles.detailColumn}>
               <Text style={styles.label}>GATEWAY</Text>
-              <Text style={styles.detailValue}>{account.gateway}</Text>
+
+              <Text style={styles.detailValue}>
+                {account.gateway.toUpperCase()}
+              </Text>
             </View>
 
             <View style={styles.detailColumn}>
-              <Text style={styles.label}>CHARGES</Text>
-              <Text style={styles.charges}>{account.charges}</Text>
+              <Text style={styles.label}>ACCOUNT TYPE</Text>
+
+              <Text style={styles.detailValue}>Virtual</Text>
             </View>
           </View>
         </AppCard>
@@ -245,12 +253,6 @@ const styles = StyleSheet.create({
 
   detailColumn: {
     flex: 1,
-  },
-
-  charges: {
-    color: colors.accent,
-    fontSize: 13,
-    fontFamily: typography.fontFamily.semibold,
   },
 
   emptyContainer: {

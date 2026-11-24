@@ -11,6 +11,10 @@ import type {
 } from "../types/auth";
 import type { WalletHistoryResponse, WalletResponse } from "../types/wallet";
 import type { ServiceTransactionHistoryResponse } from "../types/serviceTransaction";
+import type {
+  VirtualAccountResponse,
+  VirtualAccountGenerationResponse,
+} from "../types/virtualAccount";
 
 const API_BASE_URL =
   "https://psalmoteedata.com.ng/wp-json/psalmoteedata-mobile/v1";
@@ -211,6 +215,28 @@ export const transactionApi = {
       `/transactions?page=${page}&per_page=${perPage}`,
       {
         method: "GET",
+        token,
+      },
+    );
+  },
+};
+
+// Virtual Accounts
+export const virtualAccountApi = {
+  getAccounts(token: string): Promise<VirtualAccountResponse> {
+    return apiRequest<VirtualAccountResponse>("/virtual-accounts", {
+      method: "GET",
+      token,
+    });
+  },
+
+  generateAccounts(
+    token: string,
+  ): Promise<VirtualAccountGenerationResponse> {
+    return apiRequest<VirtualAccountGenerationResponse>(
+      "/virtual-accounts/generate",
+      {
+        method: "POST",
         token,
       },
     );

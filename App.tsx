@@ -13,6 +13,7 @@ import {
 import RootStackNavigator from "./navigation/RootStackNavigator";
 import { TransactionProvider } from "./context/TransactionContext";
 import { WalletProvider } from "./context/WalletContext";
+import { VirtualAccountProvider } from "./context/VirtualAccountContext";
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -34,10 +35,12 @@ export default function App() {
     <AuthProvider>
       <WalletProvider>
         <TransactionProvider>
-          <NavigationContainer>
-            <StatusBar style="light" />
-            <RootStackNavigator />
-          </NavigationContainer>
+          <VirtualAccountProvider>
+            <NavigationContainer>
+              <StatusBar style="light" />
+              <RootStackNavigator />
+            </NavigationContainer>
+          </VirtualAccountProvider>
         </TransactionProvider>
       </WalletProvider>
     </AuthProvider>

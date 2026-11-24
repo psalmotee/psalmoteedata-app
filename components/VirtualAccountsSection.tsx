@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -7,25 +9,52 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 
 import colors from "../constants/colors";
 import typography from "../constants/typography";
 import AppCard from "./AppCard";
-import {
-  MOCK_VIRTUAL_ACCOUNTS,
-  type VirtualAccount,
-} from "../data/virtualAccounts";
 
-export default function VirtualAccountsSection() {
-  const [selectedAccount, setSelectedAccount] = useState<VirtualAccount>(
-    MOCK_VIRTUAL_ACCOUNTS[0],
+import { useVirtualAccounts } from "../context/VirtualAccountContext";
+
+type Props = {
+  onPressViewAll: () => void;
+};
+
+export default function VirtualAccountsSection({ onPressViewAll }: Props) {
+  const { accounts, isLoading, error, fetchAccounts } = useVirtualAccounts();
+
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
+    null,
+  );
+
+  // Keep the selected account valid when accounts are loaded or updated.
+  useEffect(() => {
+    if (accounts.length === 0) {
+      setSelectedAccountId(null);
+      return;
+    }
+
+    const selectedAccountExists = accounts.some(
+      (account) => account.id === selectedAccountId,
+    );
+
+    if (!selectedAccountExists) {
+      setSelectedAccountId(accounts[0].id);
+    }
+  }, [accounts, selectedAccountId]);
+
+  const selectedAccount = accounts.find(
+    (account) => account.id === selectedAccountId,
   );
 
   const handleCopyAccount = async () => {
+    if (!selectedAccount) return;
+
     try {
-      await Clipboard.setStringAsync(selectedAccount.accountNumber);
+      await Clipboard.setStringAsync(selectedAccount.account_number);
 
       Alert.alert("Copied", "Account number copied successfully.");
     } catch {
@@ -42,6 +71,7 @@ export default function VirtualAccountsSection() {
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Virtual Accounts</Text>
+
           <Text style={styles.subtitle}>
             Select a bank to view your account details.
           </Text>
@@ -54,127 +84,183 @@ export default function VirtualAccountsSection() {
         />
       </View>
 
-      {/* Horizontal bank selector */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.bankSelector}
-      >
-        {MOCK_VIRTUAL_ACCOUNTS.map((account) => {
-          const isSelected = selectedAccount.id === account.id;
+      {/* Loading state */}
+      {isLoading && accounts.length === 0 ? (
+        <View style={styles.stateContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
 
-          return (
-            <TouchableOpacity
-              key={account.id}
-              activeOpacity={0.8}
-              onPress={() => setSelectedAccount(account)}
-              style={[styles.bankTab, isSelected && styles.activeBankTab]}
-            >
-              <Text
-                style={[
-                  styles.bankTabText,
-                  isSelected && styles.activeBankTabText,
-                ]}
-              >
-                {account.bankName}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* Selected account details */}
-      <AppCard style={styles.detailsCard}>
-        <View style={styles.detailsHeader}>
-          <View style={styles.bankHeading}>
-            <View style={styles.bankIcon}>
-              <MaterialCommunityIcons
-                name="bank"
-                size={21}
-                color={colors.primary}
-              />
-            </View>
-
-            <View>
-              <Text style={styles.selectedBankName}>
-                {selectedAccount.bankName}
-              </Text>
-              <Text style={styles.accountType}>Virtual Account</Text>
-            </View>
-          </View>
-
-          <View style={styles.statusBadge}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText}>Active</Text>
-          </View>
+          <Text style={styles.stateText}>Loading your virtual accounts...</Text>
         </View>
+      ) : accounts.length === 0 ? (
+        /* Empty state */
+        <AppCard style={styles.emptyCard}>
+          <MaterialCommunityIcons
+            name="bank-outline"
+            size={38}
+            color={colors.muted}
+          />
 
-        <View style={styles.divider} />
+          <Text style={styles.emptyTitle}>No Virtual Accounts Yet</Text>
 
-        {/* Bank name */}
-        <Text style={styles.label}>BANK NAME</Text>
-        <Text style={styles.detailValue}>{selectedAccount.bankName}</Text>
-
-        <View style={styles.divider} />
-
-        {/* Account name */}
-        <Text style={styles.label}>ACCOUNT NAME</Text>
-        <Text style={styles.detailValue}>{selectedAccount.accountName}</Text>
-
-        <View style={styles.divider} />
-
-        {/* Account number and copy button */}
-        <Text style={styles.label}>ACCOUNT NUMBER</Text>
-
-        <View style={styles.accountNumberRow}>
-          <Text style={styles.accountNumber}>
-            {selectedAccount.accountNumber}
+          <Text style={styles.emptyText}>
+            Generate your virtual bank accounts to start funding your wallet
+            through bank transfers.
           </Text>
+
+          {error && <Text style={styles.errorText}>{error}</Text>}
 
           <TouchableOpacity
-            style={styles.copyButton}
-            onPress={handleCopyAccount}
+            style={styles.actionButton}
+            onPress={error ? fetchAccounts : onPressViewAll}
             activeOpacity={0.8}
           >
-            <MaterialCommunityIcons
-              name="content-copy"
-              size={16}
-              color={colors.primary}
-            />
+            <Text style={styles.actionButtonText}>
+              {error ? "Try Again" : "Get Virtual Accounts"}
+            </Text>
 
-            <Text style={styles.copyText}>Copy</Text>
+            <MaterialCommunityIcons
+              name="arrow-right"
+              size={17}
+              color="#FFFFFF"
+            />
           </TouchableOpacity>
-        </View>
+        </AppCard>
+      ) : (
+        <>
+          {/* Horizontal bank selector */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.bankSelector}
+          >
+            {accounts.map((account) => {
+              const isSelected = selectedAccountId === account.id;
 
-        <View style={styles.divider} />
+              return (
+                <TouchableOpacity
+                  key={account.id}
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedAccountId(account.id)}
+                  style={[styles.bankTab, isSelected && styles.activeBankTab]}
+                >
+                  <Text
+                    style={[
+                      styles.bankTabText,
+                      isSelected && styles.activeBankTabText,
+                    ]}
+                  >
+                    {account.bank_name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
 
-        {/* Gateway and charges */}
-        <Text style={styles.label}>GATEWAY</Text>
-        <Text style={styles.detailValue}>{selectedAccount.gateway}</Text>
+          {/* Selected account details */}
+          {selectedAccount && (
+            <AppCard style={styles.detailsCard}>
+              <View style={styles.detailsHeader}>
+                <View style={styles.bankHeading}>
+                  <View style={styles.bankIcon}>
+                    <MaterialCommunityIcons
+                      name="bank"
+                      size={21}
+                      color={colors.primary}
+                    />
+                  </View>
 
-        <View style={styles.divider} />
+                  <View style={styles.bankInfo}>
+                    <Text style={styles.selectedBankName}>
+                      {selectedAccount.bank_name}
+                    </Text>
 
-        <Text style={styles.label}>CHARGES</Text>
-        <Text style={styles.gatewayCharges}>{selectedAccount.charges}</Text>
+                    <Text style={styles.accountType}>Virtual Account</Text>
+                  </View>
+                </View>
 
-        {/* Automated funding notice */}
-        <View style={styles.fundingNotice}>
-          <View style={styles.noticeHeading}>
+                <View style={styles.statusBadge}>
+                  <View style={styles.statusDot} />
+
+                  <Text style={styles.statusText}>Available</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <Text style={styles.label}>ACCOUNT NAME</Text>
+
+              <Text style={styles.detailValue}>
+                {selectedAccount.account_name}
+              </Text>
+
+              <View style={styles.divider} />
+
+              <Text style={styles.label}>ACCOUNT NUMBER</Text>
+
+              <View style={styles.accountNumberRow}>
+                <Text style={styles.accountNumber}>
+                  {selectedAccount.account_number}
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  onPress={handleCopyAccount}
+                  activeOpacity={0.8}
+                >
+                  <MaterialCommunityIcons
+                    name="content-copy"
+                    size={16}
+                    color={colors.primary}
+                  />
+
+                  <Text style={styles.copyText}>Copy</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.divider} />
+
+              <Text style={styles.label}>GATEWAY</Text>
+
+              <Text style={styles.detailValue}>
+                {selectedAccount.gateway.toUpperCase()}
+              </Text>
+
+              {/* Automated funding notice */}
+              <View style={styles.fundingNotice}>
+                <View style={styles.noticeHeading}>
+                  <MaterialCommunityIcons
+                    name="information-outline"
+                    size={19}
+                    color={colors.primary}
+                  />
+
+                  <Text style={styles.noticeTitle}>Automated Funding</Text>
+                </View>
+
+                <Text style={styles.noticeText}>
+                  Transfer money to this unique account number. Your wallet will
+                  be credited automatically once your payment is confirmed.
+                </Text>
+              </View>
+            </AppCard>
+          )}
+
+          {/* View all accounts */}
+          <TouchableOpacity
+            style={styles.viewAllButton}
+            onPress={onPressViewAll}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.viewAllText}>View All Virtual Accounts</Text>
+
             <MaterialCommunityIcons
-              name="information-outline"
-              size={19}
+              name="arrow-right"
+              size={18}
               color={colors.primary}
             />
-
-            <Text style={styles.noticeTitle}>Automated Funding 👇👇👇</Text>
-          </View>
-
-          <Text style={styles.noticeText}>
-            Make a transfer to this unique Account Number given to you, and your
-            wallet will be credited immediately.
-          </Text>
-        </View>
-      </AppCard>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 }
@@ -248,6 +334,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 11,
+    flex: 1,
+  },
+
+  bankInfo: {
+    flex: 1,
   },
 
   bankIcon: {
@@ -346,12 +437,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.semibold,
   },
 
-  gatewayCharges: {
-    color: colors.accent,
-    fontSize: 14,
-    fontFamily: typography.fontFamily.semibold,
-  },
-
   fundingNotice: {
     backgroundColor: "rgba(14,165,198,0.09)",
     borderWidth: 1,
@@ -379,5 +464,79 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: typography.fontFamily.medium,
     lineHeight: 19,
+  },
+
+  stateContainer: {
+    alignItems: "center",
+    paddingVertical: 35,
+  },
+
+  stateText: {
+    color: colors.muted,
+    fontSize: 12,
+    fontFamily: typography.fontFamily.body,
+    marginTop: 12,
+  },
+
+  emptyCard: {
+    alignItems: "center",
+    padding: 22,
+  },
+
+  emptyTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontFamily: typography.fontFamily.semibold,
+    marginTop: 12,
+  },
+
+  emptyText: {
+    color: colors.muted,
+    fontSize: 12,
+    fontFamily: typography.fontFamily.body,
+    textAlign: "center",
+    lineHeight: 19,
+    marginTop: 7,
+  },
+
+  errorText: {
+    color: colors.error,
+    fontSize: 12,
+    fontFamily: typography.fontFamily.medium,
+    textAlign: "center",
+    marginTop: 10,
+  },
+
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginTop: 18,
+  },
+
+  actionButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontFamily: typography.fontFamily.semibold,
+  },
+
+  viewAllButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 14,
+    marginTop: 8,
+  },
+
+  viewAllText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontFamily: typography.fontFamily.semibold,
   },
 });
