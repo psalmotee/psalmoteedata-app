@@ -26,7 +26,6 @@ type NormalizedReceipt = {
   reference: string;
   date: string | null;
   status: string;
-  via?: string;
   amount: number;
 };
 
@@ -77,7 +76,6 @@ const normalizeReceiptData = (data: ReceiptData): NormalizedReceipt => {
       reference: data.reference,
       date: data.date,
       status: data.status,
-      via: data.via,
       amount: Number(data.amount),
     };
   }
@@ -201,10 +199,6 @@ export async function generateReceiptPdf(data: ReceiptData) {
     ["Transaction Reference", receipt.reference || "Not available"],
     ["Date & Time", formatDate(receipt.date)],
   );
-
-  if (receipt.via) {
-    detailRows.push(["Via", receipt.via]);
-  }
 
   const detailsHtml = detailRows
     .map(

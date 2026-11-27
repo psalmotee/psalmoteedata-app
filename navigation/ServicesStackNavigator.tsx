@@ -13,6 +13,9 @@ export type ServicesStackParamList = {
   TransactionConfirmation: {
     serviceType: "Airtime" | "Data";
     network: string;
+    networkId?: string;
+    airtimeType?: string;
+    portedNumber?: boolean;
     phoneNumber: string;
     description: string;
     amount: number;
@@ -36,6 +39,12 @@ export type ServicesStackParamList = {
     totalAmount: number;
     transactionReference: string;
     completedAt: string;
+
+    // Actual backend transaction result
+    transactionStatus?: "successful" | "processing" | "failed" | "unknown";
+    transactionMessage?: string;
+    chargedAmount?: number;
+    isApiTransaction?: boolean;
   };
 };
 

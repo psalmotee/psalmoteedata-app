@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 
 import theme from "../constants/theme";
 
@@ -14,6 +14,13 @@ type NetworkSelectorProps = {
   onSelectNetwork: (networkId: string) => void;
 };
 
+const networkLogos: Record<string, any> = {
+  mtn: require("../assets/images/networks/mtn.jpg"),
+  airtel: require("../assets/images/networks/airtel.jpg"),
+  glo: require("../assets/images/networks/glo.jpg"),
+  "9mobile": require("../assets/images/networks/9mobile.jpg"),
+};
+
 export default function NetworkSelector({
   networks,
   selectedNetwork,
@@ -23,19 +30,26 @@ export default function NetworkSelector({
     <View style={styles.container}>
       {networks.map((network) => {
         const isSelected = selectedNetwork === network.id;
+        const logo = networkLogos[network.id];
 
         return (
           <Pressable
             key={network.id}
             onPress={() => onSelectNetwork(network.id)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isSelected }}
             style={[styles.networkCard, isSelected && styles.selectedNetwork]}
           >
-            <View
-              style={[styles.networkLogo, { backgroundColor: network.color }]}
-            >
-              <Text style={styles.networkInitial}>
-                {network.name === "9mobile" ? "9" : network.name.charAt(0)}
-              </Text>
+            <View style={styles.networkLogoContainer}>
+              {logo ? (
+                <Image
+                  source={logo}
+                  style={styles.networkLogo}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Text style={styles.fallbackText}>{network.name}</Text>
+              )}
             </View>
 
             <Text style={styles.networkName}>{network.name}</Text>
@@ -77,18 +91,25 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.cardSecondary,
   },
 
-  networkLogo: {
-    width: 48,
+  networkLogoContainer: {
+    width: 64,
     height: 48,
-    borderRadius: theme.radius.full,
+    backgroundColor: "#FFFFFF",
+    borderRadius: theme.radius.md,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: theme.spacing.md,
+    padding: 5,
   },
 
-  networkInitial: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.xl,
+  networkLogo: {
+    width: "100%",
+    height: "100%",
+  },
+
+  fallbackText: {
+    color: theme.colors.text,
+    fontSize: theme.typography.fontSize.sm,
     fontFamily: theme.typography.fontFamily.bold,
   },
 

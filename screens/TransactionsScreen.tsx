@@ -194,7 +194,6 @@ export default function TransactionsScreen() {
                 renderDetail("Type", transaction.type.toUpperCase())}
 
               {renderDetail("Reference", transaction.reference)}
-              {renderDetail("Via", transaction.via)}
               {renderDetail("Date", formatDate(transaction.date))}
             </ScrollView>
 

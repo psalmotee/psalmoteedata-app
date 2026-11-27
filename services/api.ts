@@ -15,6 +15,12 @@ import type {
   VirtualAccountResponse,
   VirtualAccountGenerationResponse,
 } from "../types/virtualAccount";
+import type {
+  AirtimePurchaseRequest,
+  AirtimePurchaseResponse,
+  AirtimeQuoteRequest,
+  AirtimeQuoteResponse,
+} from "../types/airtime";
 
 const API_BASE_URL =
   "https://psalmoteedata.com.ng/wp-json/psalmoteedata-mobile/v1";
@@ -230,9 +236,7 @@ export const virtualAccountApi = {
     });
   },
 
-  generateAccounts(
-    token: string,
-  ): Promise<VirtualAccountGenerationResponse> {
+  generateAccounts(token: string): Promise<VirtualAccountGenerationResponse> {
     return apiRequest<VirtualAccountGenerationResponse>(
       "/virtual-accounts/generate",
       {
@@ -240,5 +244,29 @@ export const virtualAccountApi = {
         token,
       },
     );
+  },
+};
+
+// Airtime
+export const airtimeApi = {
+  purchase(
+    token: string,
+    request: AirtimePurchaseRequest,
+  ): Promise<AirtimePurchaseResponse> {
+    return apiRequest<AirtimePurchaseResponse>("/airtime/purchase", {
+      method: "POST",
+      token,
+      body: request,
+    });
+  },
+  quote(
+    token: string,
+    request: AirtimeQuoteRequest,
+  ): Promise<AirtimeQuoteResponse> {
+    return apiRequest<AirtimeQuoteResponse>("/airtime/quote", {
+      method: "POST",
+      token,
+      body: request,
+    });
   },
 };

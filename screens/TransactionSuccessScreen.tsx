@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Alert,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Alert } from "react-native";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -28,7 +22,6 @@ type Props = NativeStackScreenProps<
 >;
 
 export default function TransactionSuccessScreen({ route, navigation }: Props) {
-  
   const {
     serviceType,
     network,
@@ -38,11 +31,34 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
     totalAmount,
     transactionReference,
     completedAt,
+    transactionStatus,
+    transactionMessage,
+    chargedAmount,
+    isApiTransaction,
   } = route.params;
 
   const { addTransaction } = useTransactions();
 
+  const status = transactionStatus ?? "successful";
+
+ const isSuccessful = status === "successful";
+ const isProcessing = status === "processing";
+ const isFailed = status === "failed";
+ const isUnknown = status === "unknown";
+
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+
+  /**
+   * Preserve the existing simulated Data purchase flow.
+   *
+   * API transactions are already recorded by the backend.
+   */
   useEffect(() => {
+    if (isApiTransaction) {
+      return;
+    }
+
     const transaction: Transaction = {
       id: transactionReference,
       serviceType,
@@ -58,6 +74,7 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
 
     addTransaction(transaction);
   }, [
+    isApiTransaction,
     addTransaction,
     serviceType,
     network,
@@ -72,13 +89,9 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
   const formatCurrency = (value: number) =>
     `₦${value.toLocaleString("en-NG", {
       minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     })}`;
 
-  // State to manage the loading state of PDF generation and sharing
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
-
-// Function to format the date in a readable format
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
 
@@ -95,7 +108,35 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
     });
   };
 
-  // Function to create the receipt PDF
+  const statusConfig = {
+    successful: {
+      icon: "check" as const,
+      title: "Transaction Successful!",
+      subtitle: `Your ${serviceType.toLowerCase()} purchase was completed.`,
+      color: theme.colors.success,
+    },
+    processing: {
+      icon: "clock-outline" as const,
+      title: "Transaction Processing",
+      subtitle: "Your transaction is still being processed.",
+      color: theme.colors.primary,
+    },
+    failed: {
+      icon: "close" as const,
+      title: "Transaction Failed",
+      subtitle: "Your transaction could not be completed.",
+      color: theme.colors.muted,
+    },
+    unknown: {
+      icon: "help-circle-outline" as const,
+      title: "Transaction Status Unknown",
+      subtitle: "We could not confirm the transaction result.",
+      color: theme.colors.muted,
+    },
+  };
+
+  const currentStatus = statusConfig[status];
+
   const createReceipt = async () => {
     return generateReceiptPdf({
       serviceType,
@@ -103,59 +144,59 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
       phoneNumber,
       description,
       amount,
-      totalAmount,
+      totalAmount: chargedAmount ?? totalAmount,
       transactionReference,
       completedAt,
     });
   };
 
-  // Handle the download or sharing of the receipt PDF
- const handleDownloadReceipt = async () => {
-   try {
-     setIsGenerating(true);
+  const handleDownloadReceipt = async () => {
+    try {
+      setIsGenerating(true);
 
-     const receipt = await createReceipt();
-     const saved = await downloadReceipt(receipt);
+      const receipt = await createReceipt();
+      const saved = await downloadReceipt(receipt);
 
-     if (saved) {
-       Alert.alert(
-         "Receipt Saved",
-         `${receipt.fileName} was saved successfully.`,
-       );
-     }
-   } catch (error) {
-     console.error("Receipt download error:", error);
+      if (saved) {
+        Alert.alert(
+          "Receipt Saved",
+          `${receipt.fileName} was saved successfully.`,
+        );
+      }
+    } catch (error) {
+      console.error("Receipt download error:", error);
 
-     Alert.alert(
-       "Download Failed",
-       "Unable to save your receipt. Please try again.",
-     );
-   } finally {
-     setIsGenerating(false);
-   }
+      Alert.alert(
+        "Download Failed",
+        "Unable to save your receipt. Please try again.",
+      );
+    } finally {
+      setIsGenerating(false);
+    }
   };
- 
-  // Handle the sharing of the receipt PDF
- const handleShareReceipt = async () => {
-   try {
-     setIsSharing(true);
 
-     const receipt = await createReceipt();
+  const handleShareReceipt = async () => {
+    try {
+      setIsSharing(true);
 
-     await shareReceipt(receipt);
-   } catch (error) {
-     console.error("Receipt sharing error:", error);
+      const receipt = await createReceipt();
 
-     Alert.alert(
-       "Sharing Failed",
-       error instanceof Error
-         ? error.message
-         : "Unable to share your receipt. Please try again.",
-     );
-   } finally {
-     setIsSharing(false);
-   }
- };
+      await shareReceipt(receipt);
+    } catch (error) {
+      console.error("Receipt sharing error:", error);
+
+      Alert.alert(
+        "Sharing Failed",
+        error instanceof Error
+          ? error.message
+          : "Unable to share your receipt. Please try again.",
+      );
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const amountPaid = chargedAmount ?? totalAmount;
 
   return (
     <ScrollView
@@ -163,30 +204,37 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      {/* Success indicator */}
-      <View style={styles.successIcon}>
+      {/* Transaction Status */}
+      <View
+        style={[styles.statusIcon, { backgroundColor: currentStatus.color }]}
+      >
         <MaterialCommunityIcons
-          name="check"
+          name={currentStatus.icon}
           size={42}
           color={theme.colors.white}
         />
       </View>
 
-      <Text style={styles.heading}>Transaction Successful!</Text>
-
-      <Text style={styles.subtitle}>
-        Your {serviceType.toLowerCase()} purchase has been completed.
+      <Text style={[styles.heading, { color: currentStatus.color }]}>
+        {currentStatus.title}
       </Text>
 
-      {/* Amount paid */}
+      <Text style={styles.subtitle}>
+        {transactionMessage || currentStatus.subtitle}
+      </Text>
+
+      {/* Amount */}
       <View style={styles.amountContainer}>
-        <Text style={styles.amountLabel}>Amount Paid</Text>
-        <Text style={styles.amount}>{formatCurrency(totalAmount)}</Text>
+        <Text style={styles.amountLabel}>
+          {isFailed ? "Transaction Amount" : "Amount"}
+        </Text>
+
+        <Text style={styles.amount}>{formatCurrency(amountPaid)}</Text>
       </View>
 
-      {/* Transaction details */}
+      {/* Transaction Details */}
       <PurchaseSummary
-        title="Transaction Receipt"
+        title="Transaction Details"
         rows={[
           { label: "Transaction Type", value: serviceType },
           { label: "Network", value: network },
@@ -195,34 +243,82 @@ export default function TransactionSuccessScreen({ route, navigation }: Props) {
             label: serviceType === "Data" ? "Data Plan" : "Description",
             value: description,
           },
-          { label: "Transaction Reference", value: transactionReference },
-          { label: "Date", value: formatDate(completedAt) },
+          {
+            label: "Transaction Reference",
+            value: transactionReference,
+          },
+          {
+            label: "Date",
+            value: formatDate(completedAt),
+          },
+          {
+            label: "Status",
+            value: status.toUpperCase(),
+          },
         ]}
         amount={formatCurrency(amount)}
-        totalLabel="Total Paid"
-        totalAmount={formatCurrency(totalAmount)}
+        totalLabel="Total Amount"
+        totalAmount={formatCurrency(amountPaid)}
       />
 
-      {/* Download Receipt Button */}
-      <AppButton
-        title={isGenerating ? "Preparing Receipt..." : "Download Receipt (PDF)"}
-        onPress={handleDownloadReceipt}
-        loading={isGenerating}
-        disabled={isGenerating || isSharing}
-      />
+      {/* Receipt Actions: Successful Transactions Only */}
+      {isSuccessful && (
+        <>
+          <AppButton
+            title={
+              isGenerating ? "Preparing Receipt..." : "Download Receipt (PDF)"
+            }
+            onPress={handleDownloadReceipt}
+            loading={isGenerating}
+            disabled={isGenerating || isSharing}
+          />
 
-      {/* Share Receipt Button */}
-      <View style={styles.secondaryButton}>
-        <AppButton
-          title={isSharing ? "Preparing Receipt..." : "Share Receipt"}
-          variant="secondary"
-          onPress={handleShareReceipt}
-          loading={isSharing}
-          disabled={isGenerating || isSharing}
-        />
-      </View>
+          <View style={styles.secondaryButton}>
+            <AppButton
+              title={isSharing ? "Preparing Receipt..." : "Share Receipt"}
+              variant="secondary"
+              onPress={handleShareReceipt}
+              loading={isSharing}
+              disabled={isGenerating || isSharing}
+            />
+          </View>
+        </>
+      )}
 
-      {/* Actions */}
+      {/* Additional Processing Information */}
+      {isProcessing && (
+        <View style={styles.notice}>
+          <Text style={styles.noticeText}>
+            Please allow some time for this transaction to complete. Avoid
+            making another purchase for the same request until you have checked
+            your transaction history.
+          </Text>
+        </View>
+      )}
+
+      {/* Failed Transaction Information */}
+      {isFailed && (
+        <View style={styles.notice}>
+          <Text style={styles.noticeText}>
+            If your wallet was debited, check your wallet balance and
+            transaction history for the refund status before trying again.
+          </Text>
+        </View>
+      )}
+
+      {/* unknown-status notice */}
+      {isUnknown && (
+        <View style={styles.notice}>
+          <Text style={styles.noticeText}>
+            We could not confirm the final result of this transaction. Please
+            check your transaction history before attempting another purchase.
+            If your wallet was debited, verify the transaction status before
+            trying again.
+          </Text>
+        </View>
+      )}
+
+      {/* Navigation */}
       <AppButton title="Back to Home" onPress={() => navigation.popToTop()} />
 
       <View style={styles.secondaryButton}>
@@ -242,27 +338,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+
   content: {
     padding: theme.spacing.lg,
     paddingTop: theme.spacing["3xl"],
     paddingBottom: theme.spacing["4xl"],
   },
-  successIcon: {
+
+  statusIcon: {
     width: 76,
     height: 76,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.success,
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
     marginBottom: theme.spacing.xl,
   },
+
   heading: {
-    color: theme.colors.success,
     fontSize: theme.typography.fontSize["2xl"],
     fontFamily: theme.typography.fontFamily.heading,
     textAlign: "center",
   },
+
   subtitle: {
     color: theme.colors.muted,
     fontSize: theme.typography.fontSize.sm,
@@ -270,22 +368,42 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: theme.spacing.sm,
   },
+
   amountContainer: {
     alignItems: "center",
     marginVertical: theme.spacing["2xl"],
   },
+
   amountLabel: {
     color: theme.colors.muted,
     fontSize: theme.typography.fontSize.sm,
     fontFamily: theme.typography.fontFamily.body,
   },
+
   amount: {
     color: theme.colors.text,
     fontSize: theme.typography.fontSize["3xl"],
     fontFamily: theme.typography.fontFamily.bold,
     marginTop: theme.spacing.sm,
   },
+
   secondaryButton: {
     marginTop: theme.spacing.md,
+  },
+
+  notice: {
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+  },
+
+  noticeText: {
+    color: theme.colors.muted,
+    fontSize: theme.typography.fontSize.sm,
+    fontFamily: theme.typography.fontFamily.body,
+    lineHeight: 21,
   },
 });
