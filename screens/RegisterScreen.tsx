@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,6 +15,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import theme from "../constants/theme";
 import FormInput from "../components/FormInput";
 import CountrySelector from "../components/CountrySelector";
+import AppButton from "../components/AppButton";
 import { authApi } from "../services/api";
 
 import type {
@@ -266,8 +266,13 @@ export default function RegisterScreen({ navigation }: Props) {
           {registrationResult.user.email}
         </Text>
 
-        <TouchableOpacity
-          style={styles.primaryButton}
+        <AppButton
+          title={
+            registrationResult.verification_required
+              ? "Verify Account"
+              : "Continue to Sign In"
+          }
+          icon="arrow-right"
           onPress={() => {
             if (registrationResult.verification_required) {
               navigation.navigate("Activation", {
@@ -278,20 +283,7 @@ export default function RegisterScreen({ navigation }: Props) {
               navigation.navigate("Login");
             }
           }}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.primaryButtonText}>
-            {registrationResult.verification_required
-              ? "Verify Account"
-              : "Continue to Sign In"}
-          </Text>
-
-          <MaterialCommunityIcons
-            name="arrow-right"
-            size={20}
-            color={theme.colors.white}
-          />
-        </TouchableOpacity>
+        />
       </View>
     );
   };
@@ -541,29 +533,13 @@ export default function RegisterScreen({ navigation }: Props) {
                 </View>
               )}
 
-              <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  isSubmitting && styles.disabledButton,
-                ]}
+              <AppButton
+                title="Create Account"
+                icon="arrow-right"
                 onPress={handleRegister}
+                loading={isSubmitting}
                 disabled={isSubmitting}
-                activeOpacity={0.8}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color={theme.colors.white} />
-                ) : (
-                  <>
-                    <Text style={styles.primaryButtonText}>Create Account</Text>
-
-                    <MaterialCommunityIcons
-                      name="arrow-right"
-                      size={20}
-                      color={theme.colors.white}
-                    />
-                  </>
-                )}
-              </TouchableOpacity>
+              />
 
               <View style={styles.loginPrompt}>
                 <Text style={styles.loginPromptText}>

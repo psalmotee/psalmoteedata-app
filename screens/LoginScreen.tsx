@@ -3,7 +3,6 @@ import { useRef, useState, useEffect } from "react";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/RootStackNavigator";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,12 +13,12 @@ import {
   Image,
 } from "react-native";
 
-import PsalmoteeDataLogo from "../assets/images/psalmoteedata-logo.png";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-
-import theme from "../constants/theme";
-import FormInput from "../components/FormInput";
 import { useAuth } from "../context/AuthContext";
+import theme from "../constants/theme";
+import PsalmoteeDataLogo from "../assets/images/psalmoteedata-logo.png";
+import FormInput from "../components/FormInput";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import AppButton from "../components/AppButton";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
@@ -170,26 +169,13 @@ export default function LoginScreen({ navigation }: Props) {
             </View>
           )}
 
-          <TouchableOpacity
-            style={[styles.loginButton, isSubmitting && styles.disabledButton]}
+          <AppButton
+            title="Sign In"
+            icon="arrow-right"
             onPress={() => handleLogin()}
+            loading={isSubmitting}
             disabled={isSubmitting}
-            activeOpacity={0.8}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <>
-                <Text style={styles.loginButtonText}>Sign In</Text>
-
-                <MaterialCommunityIcons
-                  name="arrow-right"
-                  size={20}
-                  color="#FFFFFF"
-                />
-              </>
-            )}
-          </TouchableOpacity>
+          />
 
           <View style={styles.registerPrompt}>
             <Text style={styles.registerPromptText}>
@@ -340,27 +326,6 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.xs,
     fontFamily: theme.typography.fontFamily.body,
     lineHeight: 18,
-  },
-
-  loginButton: {
-    minHeight: 52,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-  },
-
-  disabledButton: {
-    opacity: 0.65,
-  },
-
-  loginButtonText: {
-    color: "#FFFFFF",
-    fontSize: theme.typography.fontSize.sm,
-    fontFamily: theme.typography.fontFamily.bold,
   },
 
   registerPrompt: {
