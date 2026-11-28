@@ -22,6 +22,7 @@ import VirtualAccountsSection from "../components/VirtualAccountsSection";
 import { useWallet } from "../context/WalletContext";
 import HelpSupportSection from "../components/HelpSupportSection";
 import TransactionItem from "../components/TransactionItem";
+import TransactionDetailsModal from "../components/TransactionDetailsModal";
 
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -81,8 +82,11 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [selectedTransaction, setSelectedTransaction] =
     useState<ServiceTransaction | null>(null);
-
   const recentTransactions = history.slice(0, 3);
+
+  const handleTransactionPress = (transaction: ServiceTransaction) => {
+    setSelectedTransaction(transaction);
+  };
 
   const formatBalance = (amount: number) =>
     `₦${amount.toLocaleString("en-NG", {
@@ -157,6 +161,18 @@ export default function HomeScreen({ navigation }: Props) {
     }
   };
 
+  recentTransactions.map((transaction) => (
+    <TransactionItem
+      key={transaction.id}
+      name={formatService(transaction.service)}
+      date={`${transaction.recipient} • ${formatDate(transaction.date)}`}
+      amount={formatCurrency(transaction.amount)}
+      status={getStatus(transaction.status)}
+      icon={getTransactionIcon(transaction.service)}
+      onPress={() => handleTransactionPress(transaction)}
+    />
+  ));
+
   const displayedBalance =
     walletError && balance === 0
       ? "Unavailable"
@@ -190,77 +206,6 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleCommunityPress = () => {
     Alert.alert("Community", "Our community link will be available here soon.");
-  };
-
-  const handleTransactionPress = (transaction: ServiceTransaction) => {
-    setSelectedTransaction(transaction);
-  };
-
-  const renderTransactionDetails = () => {
-    if (!selectedTransaction) return null;
-
-    const transaction = selectedTransaction;
-
-    const details = [
-      { label: "Service", value: formatService(transaction.service) },
-      { label: "Recipient", value: transaction.recipient },
-      { label: "Reference", value: transaction.reference },
-      { label: "Status", value: getStatus(transaction.status) },
-      { label: "Date", value: formatDate(transaction.date) },
-      {
-        label: "Balance before",
-        value:
-          transaction.balance_before !== null
-            ? formatCurrency(transaction.balance_before)
-            : "Not available",
-      },
-      {
-        label: "Balance after",
-        value:
-          transaction.balance_after !== null
-            ? formatCurrency(transaction.balance_after)
-            : "Not available",
-      },
-    ];
-
-    return (
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Transaction Details</Text>
-
-            <TouchableOpacity onPress={() => setSelectedTransaction(null)}>
-              <MaterialCommunityIcons
-                name="close"
-                size={24}
-                color={theme.colors.text}
-              />
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.modalAmount}>
-            {formatCurrency(transaction.amount)}
-          </Text>
-
-          {details.map((detail) => (
-            <View key={detail.label} style={styles.modalDetailRow}>
-              <Text style={styles.modalDetailLabel}>{detail.label}</Text>
-
-              <Text style={styles.modalDetailValue}>
-                {detail.value || "Not available"}
-              </Text>
-            </View>
-          ))}
-
-          <TouchableOpacity
-            style={styles.modalCloseButton}
-            onPress={() => setSelectedTransaction(null)}
-          >
-            <Text style={styles.modalCloseText}>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
   };
 
   return (
@@ -446,6 +391,10 @@ export default function HomeScreen({ navigation }: Props) {
               No transactions yet. Your recent purchases will appear here.
             </Text>
           )}
+          <TransactionDetailsModal
+            transaction={selectedTransaction}
+            onClose={() => setSelectedTransaction(null)}
+          />
         </View>
 
         {/* Help & Support */}
@@ -456,7 +405,10 @@ export default function HomeScreen({ navigation }: Props) {
         />
       </ScrollView>
 
-      {renderTransactionDetails()}
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+      />
     </>
   );
 }
@@ -571,80 +523,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: theme.spacing.xl,
-  },
-
-  modalOverlay: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "flex-end",
-  },
-
-  modalContainer: {
-    backgroundColor: theme.colors.background,
-    borderTopLeftRadius: theme.radius.xl,
-    borderTopRightRadius: theme.radius.xl,
-    padding: theme.spacing.lg,
-  },
-
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: theme.spacing.xl,
-  },
-
-  modalTitle: {
-    color: theme.colors.text,
-    fontSize: theme.typography.fontSize.xl,
-    fontFamily: theme.typography.fontFamily.heading,
-  },
-
-  modalAmount: {
-    color: theme.colors.text,
-    fontSize: theme.typography.fontSize["2xl"],
-    fontFamily: theme.typography.fontFamily.bold,
-    textAlign: "center",
-    marginBottom: theme.spacing.xl,
-  },
-
-  modalDetailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
-    gap: theme.spacing.md,
-  },
-
-  modalDetailLabel: {
-    color: theme.colors.muted,
-    fontSize: theme.typography.fontSize.sm,
-    fontFamily: theme.typography.fontFamily.body,
-    flex: 1,
-  },
-
-  modalDetailValue: {
-    color: theme.colors.text,
-    fontSize: theme.typography.fontSize.sm,
-    fontFamily: theme.typography.fontFamily.medium,
-    flex: 1,
-    textAlign: "right",
-  },
-
-  modalCloseButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.radius.md,
-    alignItems: "center",
-    marginTop: theme.spacing.xl,
-  },
-
-  modalCloseText: {
-    color: theme.colors.white,
-    fontFamily: theme.typography.fontFamily.semibold,
   },
 });

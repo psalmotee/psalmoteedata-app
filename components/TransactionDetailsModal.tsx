@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { View, Text, StyleSheet, Modal, Pressable, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  Pressable,
+  Alert,
+  ScrollView,
+} from "react-native";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -7,14 +15,17 @@ import AppButton from "./AppButton";
 import theme from "../constants/theme";
 
 import type { Transaction } from "../types/transaction";
+import type { ServiceTransaction } from "../types/serviceTransaction";
 
 import { generateReceiptPdf } from "../utils/generateReceiptPdf";
 import { downloadReceipt, shareReceipt } from "../utils/receiptActions";
 
 type Props = {
-  transaction: Transaction | null;
+  transaction: Transaction | ServiceTransaction | null;
   onClose: () => void;
 };
+
+type TransactionStatus = "Successful" | "Pending" | "Failed" | "Unknown";
 
 export default function TransactionDetailsModal({
   transaction,
@@ -23,7 +34,73 @@ export default function TransactionDetailsModal({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
 
-  const formatDate = (dateString: string) => {
+  const isServiceTransaction = (
+    value: Transaction | ServiceTransaction,
+  ): value is ServiceTransaction => {
+    return "service" in value;
+  };
+
+  const getStatus = (): TransactionStatus => {
+    if (!transaction) return "Unknown";
+
+    if (!isServiceTransaction(transaction)) {
+      return transaction.status;
+    }
+
+    const status = transaction.status.toLowerCase();
+
+    if (status.includes("success") || status.includes("complete")) {
+      return "Successful";
+    }
+
+    if (status.includes("pending") || status.includes("process")) {
+      return "Pending";
+    }
+
+    if (status.includes("fail")) {
+      return "Failed";
+    }
+
+    return "Unknown";
+  };
+
+  const getStatusColor = () => {
+    switch (getStatus()) {
+      case "Successful":
+        return theme.colors.success;
+
+      case "Pending":
+        return theme.colors.accent;
+
+      case "Failed":
+        return theme.colors.error;
+
+      default:
+        return theme.colors.muted;
+    }
+  };
+
+  const getStatusIcon = (): keyof typeof MaterialCommunityIcons.glyphMap => {
+    switch (getStatus()) {
+      case "Successful":
+        return "check-circle";
+
+      case "Pending":
+        return "clock-outline";
+
+      case "Failed":
+        return "close-circle";
+
+      default:
+        return "help-circle-outline";
+    }
+  };
+
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) {
+      return "Date unavailable";
+    }
+
     const date = new Date(dateString);
 
     if (Number.isNaN(date.getTime())) {
@@ -46,41 +123,90 @@ export default function TransactionDetailsModal({
     })}`;
   };
 
-  const getStatusColor = () => {
-    switch (transaction?.status) {
-      case "Successful":
-        return theme.colors.success;
+  const getAmount = () => {
+    if (!transaction) return 0;
 
-      case "Pending":
-        return theme.colors.accent;
-
-      case "Failed":
-        return theme.colors.error;
-
-      default:
-        return theme.colors.muted;
-    }
+    return isServiceTransaction(transaction)
+      ? transaction.amount
+      : transaction.totalAmount;
   };
 
-  const getStatusIcon = (): keyof typeof MaterialCommunityIcons.glyphMap => {
-    switch (transaction?.status) {
-      case "Successful":
-        return "check-circle";
+  const getTransactionDetails = () => {
+    if (!transaction) return [];
 
-      case "Pending":
-        return "clock-outline";
-
-      case "Failed":
-        return "close-circle";
-
-      default:
-        return "help-circle-outline";
+    if (isServiceTransaction(transaction)) {
+      return [
+        {
+          label: "Transaction Reference",
+          value: transaction.reference || "Unavailable",
+        },
+        {
+          label: "Service",
+          value: transaction.service || "Unavailable",
+        },
+        {
+          label: "Recipient",
+          value: transaction.recipient || "Unavailable",
+        },
+        ...(transaction.plan
+          ? [{ label: "Plan", value: transaction.plan }]
+          : []),
+        ...(transaction.provider
+          ? [{ label: "Provider", value: transaction.provider }]
+          : []),
+        ...(transaction.type
+          ? [{ label: "Type", value: transaction.type }]
+          : []),
+        {
+          label: "Date",
+          value: formatDate(transaction.date),
+        },
+        {
+          label: "Amount Paid",
+          value: formatCurrency(transaction.amount),
+        },
+      ];
     }
+
+    return [
+      {
+        label: "Transaction Reference",
+        value: transaction.transactionReference,
+      },
+      {
+        label: "Service",
+        value: transaction.serviceType,
+      },
+      {
+        label: "Network",
+        value: transaction.network,
+      },
+      {
+        label: "Recipient",
+        value: transaction.phoneNumber,
+      },
+      {
+        label: "Description",
+        value: transaction.description,
+      },
+      {
+        label: "Date",
+        value: formatDate(transaction.completedAt),
+      },
+      {
+        label: "Amount Paid",
+        value: formatCurrency(transaction.totalAmount),
+      },
+    ];
   };
 
   const createReceipt = async () => {
     if (!transaction) {
       throw new Error("No transaction selected.");
+    }
+
+    if (isServiceTransaction(transaction)) {
+      return generateReceiptPdf(transaction);
     }
 
     return generateReceiptPdf({
@@ -146,6 +272,9 @@ export default function TransactionDetailsModal({
     }
   };
 
+  const canGenerateReceipt =
+    transaction !== null && getStatus() === "Successful";
+
   return (
     <Modal
       visible={transaction !== null}
@@ -158,7 +287,15 @@ export default function TransactionDetailsModal({
           {transaction && (
             <>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Transaction Details</Text>
+                <View style={styles.modalTitleContainer}>
+                  <MaterialCommunityIcons
+                    name="receipt-text-outline"
+                    size={22}
+                    color={theme.colors.primary}
+                  />
+
+                  <Text style={styles.modalTitle}>Transaction Details</Text>
+                </View>
 
                 <Pressable
                   onPress={onClose}
@@ -172,92 +309,79 @@ export default function TransactionDetailsModal({
                 </Pressable>
               </View>
 
-              <View style={styles.modalStatus}>
-                <MaterialCommunityIcons
-                  name={getStatusIcon()}
-                  size={32}
-                  color={getStatusColor()}
-                />
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+              >
+                <View style={styles.modalStatus}>
+                  <MaterialCommunityIcons
+                    name={getStatusIcon()}
+                    size={32}
+                    color={getStatusColor()}
+                  />
 
-                <Text style={styles.modalAmount}>
-                  {formatCurrency(transaction.totalAmount)}
-                </Text>
+                  <Text style={styles.modalAmount}>
+                    {formatCurrency(getAmount())}
+                  </Text>
 
-                <Text
-                  style={[styles.modalStatusText, { color: getStatusColor() }]}
-                >
-                  {transaction.status}
-                </Text>
-              </View>
+                  <Text
+                    style={[
+                      styles.modalStatusText,
+                      { color: getStatusColor() },
+                    ]}
+                  >
+                    {getStatus()}
+                  </Text>
+                </View>
 
-              <View style={styles.modalDetails}>
-                {[
-                  {
-                    label: "Transaction Reference",
-                    value: transaction.transactionReference,
-                  },
-                  {
-                    label: "Service",
-                    value: transaction.serviceType,
-                  },
-                  {
-                    label: "Network",
-                    value: transaction.network,
-                  },
-                  {
-                    label: "Recipient",
-                    value: transaction.phoneNumber,
-                  },
-                  {
-                    label: "Description",
-                    value: transaction.description,
-                  },
-                  {
-                    label: "Date",
-                    value: formatDate(transaction.completedAt),
-                  },
-                  {
-                    label: "Amount Paid",
-                    value: formatCurrency(transaction.totalAmount),
-                  },
-                ].map((item) => (
-                  <View key={item.label} style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>{item.label}</Text>
+                <View style={styles.modalDetails}>
+                  {getTransactionDetails().map((item) => (
+                    <View key={item.label} style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>{item.label}</Text>
 
-                    <Text style={styles.detailValue}>{item.value}</Text>
-                  </View>
-                ))}
-              </View>
+                      <Text style={styles.detailValue}>{item.value}</Text>
+                    </View>
+                  ))}
+                </View>
 
-              <AppButton
-                title={
-                  isGenerating
-                    ? "Preparing Receipt..."
-                    : "Download Receipt (PDF)"
-                }
-                onPress={handleDownloadReceipt}
-                loading={isGenerating}
-                disabled={isGenerating || isSharing}
-              />
+                {canGenerateReceipt && (
+                  <>
+                    <AppButton
+                      title={
+                        isGenerating
+                          ? "Preparing Receipt..."
+                          : "Download Receipt (PDF)"
+                      }
+                      icon="download"
+                      onPress={handleDownloadReceipt}
+                      loading={isGenerating}
+                      disabled={isGenerating || isSharing}
+                    />
 
-              <View style={styles.buttonSpacing}>
-                <AppButton
-                  title={isSharing ? "Preparing Receipt..." : "Share Receipt"}
-                  variant="secondary"
-                  onPress={handleShareReceipt}
-                  loading={isSharing}
-                  disabled={isGenerating || isSharing}
-                />
-              </View>
+                    <View style={styles.buttonSpacing}>
+                      <AppButton
+                        title={
+                          isSharing ? "Preparing Receipt..." : "Share Receipt"
+                        }
+                        variant="secondary"
+                        icon="share-variant"
+                        onPress={handleShareReceipt}
+                        loading={isSharing}
+                        disabled={isGenerating || isSharing}
+                      />
+                    </View>
+                  </>
+                )}
 
-              <View style={styles.buttonSpacing}>
-                <AppButton
-                  title="Close"
-                  variant="secondary"
-                  onPress={onClose}
-                  disabled={isGenerating || isSharing}
-                />
-              </View>
+                <View style={styles.buttonSpacing}>
+                  <AppButton
+                    title="Close"
+                    variant="secondary"
+                    onPress={onClose}
+                    disabled={isGenerating || isSharing}
+                  />
+                </View>
+              </ScrollView>
             </>
           )}
         </View>
@@ -274,6 +398,7 @@ const styles = StyleSheet.create({
   },
 
   modalContainer: {
+    maxHeight: "90%",
     backgroundColor: theme.colors.background,
     borderTopLeftRadius: theme.radius["2xl"],
     borderTopRightRadius: theme.radius["2xl"],
@@ -283,22 +408,34 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
 
+  scrollContent: {
+    paddingBottom: theme.spacing.md,
+  },
+
   modalHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: theme.spacing.xl,
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.md,
+  },
+
+  modalTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
 
   modalTitle: {
+    fontSize: theme.typography.fontSize.lg,
+    fontFamily: theme.typography.fontFamily.semibold,
     color: theme.colors.text,
-    fontFamily: theme.typography.fontFamily.heading,
-    fontSize: theme.typography.fontSize.xl,
   },
 
   modalStatus: {
     alignItems: "center",
-    paddingVertical: theme.spacing.lg,
+    paddingVertical: theme.spacing.xl,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.radius.lg,
     marginBottom: theme.spacing.lg,
   },
 

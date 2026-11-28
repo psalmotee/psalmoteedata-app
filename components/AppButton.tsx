@@ -1,4 +1,11 @@
-import { Pressable, Text, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  Pressable,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  View,
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import theme from "../constants/theme";
 
@@ -6,6 +13,8 @@ type AppButtonProps = {
   title: string;
   onPress?: () => void;
   variant?: "primary" | "secondary";
+  icon?: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  iconSize?: number;
   disabled?: boolean;
   loading?: boolean;
 };
@@ -14,11 +23,15 @@ export default function AppButton({
   title,
   onPress,
   variant = "primary",
+  icon,
+  iconSize = 20,
   disabled = false,
   loading = false,
 }: AppButtonProps) {
   const isPrimary = variant === "primary";
   const isDisabled = disabled || loading;
+
+  const iconColor = isPrimary ? theme.colors.white : theme.colors.primary;
 
   return (
     <Pressable
@@ -32,18 +45,26 @@ export default function AppButton({
       ]}
     >
       {loading ? (
-        <ActivityIndicator
-          color={isPrimary ? theme.colors.white : theme.colors.primary}
-        />
+        <ActivityIndicator color={iconColor} />
       ) : (
-        <Text
-          style={[
-            styles.text,
-            isPrimary ? styles.primaryText : styles.secondaryText,
-          ]}
-        >
-          {title}
-        </Text>
+        <View style={styles.content}>
+          {icon && (
+            <MaterialCommunityIcons
+              name={icon}
+              size={iconSize}
+              color={iconColor}
+            />
+          )}
+
+          <Text
+            style={[
+              styles.text,
+              isPrimary ? styles.primaryText : styles.secondaryText,
+            ]}
+          >
+            {title}
+          </Text>
+        </View>
       )}
     </Pressable>
   );
@@ -58,6 +79,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+
   primaryButton: {
     backgroundColor: theme.colors.primary,
   },
@@ -65,7 +94,11 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: theme.colors.cardSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.primary,
+  },
+
+  outlintButton: {
+
   },
 
   text: {
